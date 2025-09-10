@@ -1,0 +1,253 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-size: 14px;
+  
+  /* Colores Axity - Primarios */
+  --axity-purple: #402E7A;        /* Púrpura principal */
+  --axity-violet: #8B5FBF;       /* Violeta */
+  --axity-magenta: #E91E63;      /* Rojo Magenta */
+  --axity-light-gray: #B0B3B8;   /* Gris Claro */
+  
+  /* Colores Axity - Complementarios */
+  --axity-orange: #FF7043;       /* Naranja */
+  --axity-fuchsia: #E040FB;      /* Fucsia */
+  --axity-dark-purple: #4A148C;  /* Morado */
+  --axity-gray: #78909C;         /* Gris */
+  --axity-indigo: #3F51B5;       /* Índigo */
+  --axity-mint: #4DB6AC;         /* Menta */
+  --axity-blue: #29B6F6;         /* Azul */
+  
+  /* Mapeo a variables del sistema */
+  --background: #ffffff;
+  --foreground: var(--axity-purple);
+  --card: #ffffff;
+  --card-foreground: var(--axity-purple);
+  --popover: #ffffff;
+  --popover-foreground: var(--axity-purple);
+  --primary: var(--axity-purple);
+  --primary-foreground: #ffffff;
+  --secondary: #f8f6ff;
+  --secondary-foreground: var(--axity-purple);
+  --muted: #f3f1ff;
+  --muted-foreground: var(--axity-gray);
+  --accent: var(--axity-violet);
+  --accent-foreground: #ffffff;
+  --destructive: var(--axity-magenta);
+  --destructive-foreground: #ffffff;
+  --border: rgba(64, 46, 122, 0.15);
+  --input: transparent;
+  --input-background: #fafafa;
+  --switch-background: var(--axity-light-gray);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: var(--axity-violet);
+  
+  /* Charts con colores Axity */
+  --chart-1: var(--axity-purple);
+  --chart-2: var(--axity-violet);
+  --chart-3: var(--axity-magenta);
+  --chart-4: var(--axity-orange);
+  --chart-5: var(--axity-mint);
+  
+  --radius: 0.625rem;
+  --sidebar: #f8f6ff;
+  --sidebar-foreground: var(--axity-purple);
+  --sidebar-primary: var(--axity-purple);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3f1ff;
+  --sidebar-accent-foreground: var(--axity-purple);
+  --sidebar-border: rgba(64, 46, 122, 0.1);
+  --sidebar-ring: var(--axity-violet);
+}
+
+.dark {
+  --background: #1a1625;
+  --foreground: #f8f6ff;
+  --card: #1a1625;
+  --card-foreground: #f8f6ff;
+  --popover: #1a1625;
+  --popover-foreground: #f8f6ff;
+  --primary: var(--axity-violet);
+  --primary-foreground: #ffffff;
+  --secondary: #2d2438;
+  --secondary-foreground: #f8f6ff;
+  --muted: #2d2438;
+  --muted-foreground: var(--axity-light-gray);
+  --accent: var(--axity-violet);
+  --accent-foreground: #ffffff;
+  --destructive: var(--axity-magenta);
+  --destructive-foreground: #ffffff;
+  --border: rgba(139, 95, 191, 0.2);
+  --input: #2d2438;
+  --ring: var(--axity-violet);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: var(--axity-violet);
+  --chart-2: var(--axity-magenta);
+  --chart-3: var(--axity-orange);
+  --chart-4: var(--axity-mint);
+  --chart-5: var(--axity-blue);
+  --sidebar: #1a1625;
+  --sidebar-foreground: #f8f6ff;
+  --sidebar-primary: var(--axity-violet);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #2d2438;
+  --sidebar-accent-foreground: #f8f6ff;
+  --sidebar-border: rgba(139, 95, 191, 0.1);
+  --sidebar-ring: var(--axity-violet);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  
+  /* Colores Axity específicos */
+  --color-axity-purple: var(--axity-purple);
+  --color-axity-violet: var(--axity-violet);
+  --color-axity-magenta: var(--axity-magenta);
+  --color-axity-orange: var(--axity-orange);
+  --color-axity-mint: var(--axity-mint);
+  --color-axity-blue: var(--axity-blue);
+  --color-axity-fuchsia: var(--axity-fuchsia);
+  --color-axity-indigo: var(--axity-indigo);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Gradientes Axity */
+@layer utilities {
+  .bg-axity-gradient-primary {
+    background: linear-gradient(135deg, var(--axity-purple) 0%, var(--axity-violet) 100%);
+  }
+  
+  .bg-axity-gradient-secondary {
+    background: linear-gradient(135deg, var(--axity-violet) 0%, var(--axity-magenta) 100%);
+  }
+  
+  .bg-axity-gradient-accent {
+    background: linear-gradient(135deg, var(--axity-orange) 0%, var(--axity-magenta) 100%);
+  }
+  
+  .bg-axity-gradient-cool {
+    background: linear-gradient(135deg, var(--axity-mint) 0%, var(--axity-blue) 100%);
+  }
+
+  /* Utility para truncar texto con elipsis */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+@layer base {
+  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    p {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+
+    label {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+      line-height: 1.5;
+    }
+
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+      line-height: 1.5;
+    }
+  }
+}
+
+html {
+  font-size: var(--font-size);
+}
