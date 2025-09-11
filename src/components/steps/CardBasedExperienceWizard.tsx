@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -73,8 +73,6 @@ export function CardBasedExperienceWizard({
   updateFormData,
   addProgress,
   addMotivationalMessage,
-  streakCounter,
-  setStreakCounter
 }: ExperienceStepProps) {
   const [experiences, setExperiences] = useState<Experience[]>(
     formData.experiences?.map((exp: any, index: number) => ({
@@ -93,17 +91,6 @@ export function CardBasedExperienceWizard({
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'company' | 'position'>('date');
   const [showPreview, setShowPreview] = useState(false);
-
-  const formRef = useRef<HTMLDivElement>(null);
-
-  const handleExperienceReorder = (newOrder: Experience[]) => {
-    const reorderedExps = newOrder.map((exp, index) => ({
-      ...exp,
-      priority: index
-    }));
-    setExperiences(reorderedExps);
-    updateFormData("experiences", reorderedExps);
-  };
 
   const createNewExperience = () => {
     const newExp: Experience = {
@@ -157,18 +144,6 @@ export function CardBasedExperienceWizard({
     setSelectedExp(null);
     setIsCreating(false);
     setFormStep('overview');
-  };
-
-  const deleteExperience = (expId: string) => {
-    const updatedExperiences = experiences.filter(exp => exp.id !== expId);
-    setExperiences(updatedExperiences);
-    updateFormData("experiences", updatedExperiences);
-    
-    if (selectedExp?.id === expId) {
-      setSelectedExp(null);
-      setIsCreating(false);
-      setFormStep('overview');
-    }
   };
 
   const getDuration = (startDate: string, endDate: string, current: boolean) => {
