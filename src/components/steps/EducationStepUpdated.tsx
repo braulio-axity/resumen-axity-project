@@ -115,7 +115,7 @@ export function EducationStep({
       setStreakCounter(prev => ({ ...prev, education: prev.education + 1 }));
       
       // Mensajes especiales para educación
-      const educationMilestones = {
+      const educationMilestones: Record<number, string[]> = {
         1: ["¡Fundación académica establecida! 🏛️", "¡Tu preparación formal brilla! ✨", "¡Base de conocimiento sólida! 🧠"],
         2: ["¡Formación académica diversa! 📚", "¡Tu preparación es excepcional! 🌟", "¡Background educativo impresionante! 🎓"],
         3: ["¡Académicamente sobresaliente! 👑", "¡Tu formación es tu superpoder! ⚡", "¡Education level: Expert! 🏆"]
@@ -153,7 +153,7 @@ export function EducationStep({
       setStreakCounter(prev => ({ ...prev, certifications: prev.certifications + 1 }));
       
       // Mensajes especiales para certificaciones  
-      const certificationMilestones = {
+      const certificationMilestones: Record<number, string[]> = {
         1: ["¡Primera certificación desbloqueada! 🏅", "¡Tu expertise está validada! ✅", "¡Credencial técnica conseguida! 🎖️"],
         3: ["¡Portfolio de certificaciones sólido! 💪", "¡Tus skills están bien respaldados! 🛡️", "¡Certificaciones de peso! ⚖️"],
         5: ["¡Eres una máquina de certificaciones! 🤖", "¡Validation master achieved! 🏆", "¡Tu expertise es incuestionable! 👑"],
@@ -183,13 +183,13 @@ export function EducationStep({
 
   // Combinar educación y certificaciones en una timeline cronológica
   const createTimelineData = () => {
-    const education = (formData.education || []).map(edu => ({
+    const education = (formData.education || []).map((edu: any) => ({
       ...edu,
       type: 'education' as const,
       sortYear: parseInt(edu.year) || 0
     }));
     
-    const certifications = (formData.certifications || []).map(cert => ({
+    const certifications = (formData.certifications || []).map((cert: any) => ({
       ...cert,
       type: 'certification' as const,
       sortYear: parseInt(cert.year) || 0

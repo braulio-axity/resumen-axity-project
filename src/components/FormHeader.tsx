@@ -12,7 +12,7 @@ import {
   Settings
 } from "lucide-react";
 import { CONSULTANT_LEVELS, FORM_STEPS } from "../constants";
-import { FormData } from "../types";
+import type { FormData } from "../types/app";
 import axityLogo from 'figma:asset/57af6e8947c8fbfc785c96ea7f281591f169a017.png';
 
 interface FormHeaderProps {
@@ -36,7 +36,6 @@ export function FormHeader({
   navigateToStep,
   saveState,
   forceSave,
-  clearSavedData
 }: FormHeaderProps) {
   const currentLevelInfo = CONSULTANT_LEVELS[formData.level];
 
@@ -73,7 +72,6 @@ export function FormHeader({
                 lastSaved={saveState.lastSaved}
                 error={saveState.error}
                 onForceSave={forceSave}
-                onClearData={clearSavedData}
               />
 
               {/* Usuario Card Moderno */}

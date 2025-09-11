@@ -17,38 +17,20 @@ import {
   User,
   MapPin,
   Clock,
-  Edit3,
   Save,
-  X,
-  Star,
-  Sparkles,
-  ArrowRight,
   ArrowLeft,
   CheckCircle,
-  Circle,
   GripVertical,
   Eye,
   EyeOff,
   Briefcase,
   Rocket,
-  Zap,
-  Heart,
-  Coffee,
-  Award,
-  TrendingUp,
-  BarChart3,
-  PieChart,
   Activity,
   Layers,
   Grid3X3,
   Layout,
-  Maximize2,
   Minimize2,
-  RotateCcw,
-  Settings,
-  Filter,
   Search,
-  SortAsc
 } from "lucide-react";
 
 interface ExperienceStepProps {
@@ -372,7 +354,7 @@ export function CardBasedExperienceWizard({
         </div>
 
         {/* Form Tabs */}
-        <Tabs value={formStep} onValueChange={(value: FormStep) => setFormStep(value)}>
+        <Tabs value={formStep} onValueChange={(value) => setFormStep(value as FormStep)}>
           <TabsList className="grid grid-cols-4 w-full">
             <TabsTrigger value="basic" className="text-xs">
               <Building className="h-3 w-3 mr-1" />

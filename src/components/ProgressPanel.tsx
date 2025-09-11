@@ -9,8 +9,8 @@ import {
   MessageSquare,
   ChevronDown
 } from "lucide-react";
-import { Dispatch, SetStateAction } from "react";
-import { MotivationalMessage, FormData, StreakCounter } from "../types";
+import type { Dispatch, SetStateAction } from "react";
+import type { MotivationalMessage, FormData, StreakCounter } from "../types/app";
 
 interface ProgressPanelProps {
   showProgressPanel: boolean;

@@ -25,8 +25,8 @@ export function useAutoSave({
   onError
 }: UseAutoSaveOptions) {
   const [saveState, setSaveState] = useState<AutoSaveState>({ status: 'idle' });
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const previousDataRef = useRef<string>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousDataRef = useRef<string | null>(null);
   const isInitialLoadRef = useRef(true);
 
   // Función para guardar en localStorage

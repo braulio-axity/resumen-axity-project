@@ -17,14 +17,15 @@ import { InlineExperienceWizard } from "./InlineExperienceWizard";
 import { SlidePanelExperience } from "./SlidePanelExperience";
 import { CarouselExperience } from "./CarouselExperience";
 import { NewExperienceStep } from "./NewExperienceStep"; // Original
+import type { StreakCounter } from "@/types/app";
 
 interface ExperienceStepProps {
   formData: any;
   updateFormData: (field: string, value: any) => void;
   addProgress: (points: number, milestone?: string) => void;
   addMotivationalMessage: (type: string, message: string, description?: string, icon?: string, context?: string) => void;
-  streakCounter: any;
-  setStreakCounter: (fn: (prev: any) => any) => void;
+  streakCounter: StreakCounter;
+  setStreakCounter: React.Dispatch<React.SetStateAction<StreakCounter>>;
 }
 
 type ExperienceMode = 'selector' | 'inline' | 'panel' | 'carousel' | 'original';

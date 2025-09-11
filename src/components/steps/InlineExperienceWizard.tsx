@@ -27,6 +27,7 @@ import {
   PlayCircle,
 } from "lucide-react";
 import { Separator } from "../ui/separator";
+import type { StreakCounter } from "@/types/app";
 
 /* =========================
    Tipos
@@ -42,8 +43,8 @@ interface ExperienceStepProps {
     icon?: string,
     context?: string
   ) => void;
-  streakCounter: any;
-  setStreakCounter: (fn: (prev: any) => any) => void;
+  streakCounter: StreakCounter;
+  setStreakCounter: React.Dispatch<React.SetStateAction<StreakCounter>>;
 }
 
 interface ProjectTechnology {

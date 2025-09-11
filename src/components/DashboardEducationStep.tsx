@@ -6,61 +6,133 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { GraduationCap, Award, Plus, Edit3, Trash2, BookOpen, Calendar, Star, Zap, Building2 } from "lucide-react";
+import { Award, Plus, Edit3, Trash2, BookOpen, Calendar, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
+/* =========================
+   Tipos y utilidades
+   ========================= */
+
+const degreeIcons = {
+  "Técnico": "🔧",
+  "Licenciatura": "🎓",
+  "Ingeniería": "⚙️",
+  "Maestría": "🎖️",
+  "Doctorado": "👨‍🎓",
+  "Bootcamp": "⚡",
+  "Certificado": "📜",
+  "Diplomado": "📋",
+} as const;
+
+type Degree = keyof typeof degreeIcons;
+
+export type Education = {
+  institution: string;
+  degree: string; // usamos string porque el usuario puede escribir libremente, pero abajo “narroweamos”
+  field: string;
+  year: string;
+  gpa: string;
+  honors: string;
+  location: string;
+};
+
+export type Certification = {
+  name: string;
+  issuer: string;
+  year: string;
+  credentialId: string;
+  expiryDate: string;
+  verificationUrl: string;
+};
+
+function getDegreeIcon(degree: string): string {
+  const key = degree as Degree;
+  return degreeIcons[key] ?? "📚";
+}
+
+function isExpired(expiryDate?: string): boolean {
+  if (!expiryDate) return false;
+  return new Date(expiryDate) < new Date();
+}
+
+/* =========================
+   Props del componente principal
+   ========================= */
+
 interface DashboardEducationStepProps {
-  data: any;
-  updateData: (field: string, value: any) => void;
+  data: {
+    education?: Education[];
+    certifications?: Certification[];
+    // permite campos extra sin romper:
+    [key: string]: unknown;
+  };
+  updateData: (field: string, value: unknown) => void;
   addXP: (points: number, achievement?: string) => void;
 }
 
+/* =========================
+   Componente principal
+   ========================= */
+
 export function DashboardEducationStep({ data, updateData, addXP }: DashboardEducationStepProps) {
-  const [activeTab, setActiveTab] = useState("education");
+  const [activeTab, setActiveTab] = useState<string>("education");
   const [showEducationForm, setShowEducationForm] = useState(false);
   const [showCertificationForm, setShowCertificationForm] = useState(false);
-  const [editingEducationIndex, setEditingEducationIndex] = useState(-1);
-  const [editingCertificationIndex, setEditingCertificationIndex] = useState(-1);
-  
-  const [currentEducation, setCurrentEducation] = useState({
+  const [editingEducationIndex, setEditingEducationIndex] = useState<number>(-1);
+  const [editingCertificationIndex, setEditingCertificationIndex] = useState<number>(-1);
+
+  const [currentEducation, setCurrentEducation] = useState<Education>({
     institution: "",
     degree: "",
     field: "",
     year: "",
     gpa: "",
     honors: "",
-    location: ""
+    location: "",
   });
 
-  const [currentCertification, setCurrentCertification] = useState({
+  const [currentCertification, setCurrentCertification] = useState<Certification>({
     name: "",
     issuer: "",
     year: "",
     credentialId: "",
     expiryDate: "",
-    verificationUrl: ""
+    verificationUrl: "",
   });
 
-  const degreeTypes = [
+  const degreeTypes: Degree[] = [
     "Técnico",
-    "Licenciatura", 
+    "Licenciatura",
     "Ingeniería",
     "Maestría",
     "Doctorado",
     "Bootcamp",
     "Certificado",
-    "Diplomado"
+    "Diplomado",
   ];
 
-  const topCertificationProviders = [
-    "AWS", "Microsoft", "Google Cloud", "Oracle", "Salesforce", 
-    "Adobe", "Cisco", "VMware", "Red Hat", "IBM", "PMP", "Scrum.org",
-    "Coursera", "Udacity", "Platzi", "edX"
+  const topCertificationProviders: string[] = [
+    "AWS",
+    "Microsoft",
+    "Google Cloud",
+    "Oracle",
+    "Salesforce",
+    "Adobe",
+    "Cisco",
+    "VMware",
+    "Red Hat",
+    "IBM",
+    "PMP",
+    "Scrum.org",
+    "Coursera",
+    "Udacity",
+    "Platzi",
+    "edX",
   ];
 
   const addEducation = () => {
     if (currentEducation.institution && currentEducation.degree) {
-      const education = data.education || [];
+      const education = (data.education || []) as Education[];
       if (editingEducationIndex >= 0) {
         education[editingEducationIndex] = currentEducation;
         updateData("education", education);
@@ -78,7 +150,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
 
   const addCertification = () => {
     if (currentCertification.name && currentCertification.issuer) {
-      const certifications = data.certifications || [];
+      const certifications = (data.certifications || []) as Certification[];
       if (editingCertificationIndex >= 0) {
         certifications[editingCertificationIndex] = currentCertification;
         updateData("certifications", certifications);
@@ -95,65 +167,72 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
   };
 
   const editEducation = (index: number) => {
-    const education = data.education || [];
+    const education = (data.education || []) as Education[];
     setCurrentEducation(education[index]);
     setEditingEducationIndex(index);
     setShowEducationForm(true);
   };
 
   const editCertification = (index: number) => {
-    const certifications = data.certifications || [];
+    const certifications = (data.certifications || []) as Certification[];
     setCurrentCertification(certifications[index]);
     setEditingCertificationIndex(index);
     setShowCertificationForm(true);
   };
 
   const removeEducation = (index: number) => {
-    const education = data.education || [];
-    updateData("education", education.filter((_: any, i: number) => i !== index));
+    const education = (data.education || []) as Education[];
+    updateData(
+      "education",
+      education.filter((_, i) => i !== index)
+    );
   };
 
   const removeCertification = (index: number) => {
-    const certifications = data.certifications || [];
-    updateData("certifications", certifications.filter((_: any, i: number) => i !== index));
+    const certifications = (data.certifications || []) as Certification[];
+    updateData(
+      "certifications",
+      certifications.filter((_, i) => i !== index)
+    );
   };
 
   const resetEducationForm = () => {
-    setCurrentEducation({ institution: "", degree: "", field: "", year: "", gpa: "", honors: "", location: "" });
+    setCurrentEducation({
+      institution: "",
+      degree: "",
+      field: "",
+      year: "",
+      gpa: "",
+      honors: "",
+      location: "",
+    });
     setShowEducationForm(false);
     setEditingEducationIndex(-1);
   };
 
   const resetCertificationForm = () => {
-    setCurrentCertification({ name: "", issuer: "", year: "", credentialId: "", expiryDate: "", verificationUrl: "" });
+    setCurrentCertification({
+      name: "",
+      issuer: "",
+      year: "",
+      credentialId: "",
+      expiryDate: "",
+      verificationUrl: "",
+    });
     setShowCertificationForm(false);
     setEditingCertificationIndex(-1);
   };
 
-  const getDegreeIcon = (degree: string) => {
-    const icons = {
-      "Técnico": "🔧",
-      "Licenciatura": "🎓",
-      "Ingeniería": "⚙️",
-      "Maestría": "🎖️",
-      "Doctorado": "👨‍🎓",
-      "Bootcamp": "⚡",
-      "Certificado": "📜",
-      "Diplomado": "📋"
-    };
-    return icons[degree] || "📚";
-  };
-
   const getCertificationBadgeColor = (issuer: string) => {
-    const colors = {
-      "AWS": "bg-orange-100 text-orange-800 border-orange-200",
-      "Microsoft": "bg-blue-100 text-blue-800 border-blue-200",
-      "Google": "bg-green-100 text-green-800 border-green-200",
-      "Oracle": "bg-red-100 text-red-800 border-red-200",
-      "Salesforce": "bg-blue-100 text-blue-800 border-blue-200",
-      "Adobe": "bg-purple-100 text-purple-800 border-purple-200"
+    const colors: Record<string, string> = {
+      AWS: "bg-orange-100 text-orange-800 border-orange-200",
+      Microsoft: "bg-blue-100 text-blue-800 border-blue-200",
+      Google: "bg-green-100 text-green-800 border-green-200",
+      Oracle: "bg-red-100 text-red-800 border-red-200",
+      Salesforce: "bg-blue-100 text-blue-800 border-blue-200",
+      Adobe: "bg-purple-100 text-purple-800 border-purple-200",
     };
-    
+
     for (const [company, colorClass] of Object.entries(colors)) {
       if (issuer.toLowerCase().includes(company.toLowerCase())) {
         return colorClass;
@@ -162,13 +241,8 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
-  const isExpired = (expiryDate: string) => {
-    if (!expiryDate) return false;
-    return new Date(expiryDate) < new Date();
-  };
-
-  const educationCount = data.education?.length || 0;
-  const certificationCount = data.certifications?.length || 0;
+  const educationCount = (data.education?.length || 0) as number;
+  const certificationCount = (data.certifications?.length || 0) as number;
   const totalCount = educationCount + certificationCount;
 
   return (
@@ -196,7 +270,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-3xl font-bold text-orange-600 mb-1">
-              {data.certifications?.filter(cert => !isExpired(cert.expiryDate)).length || 0}
+              {data.certifications?.filter((cert: Certification) => !isExpired(cert.expiryDate)).length || 0}
             </div>
             <div className="text-sm text-gray-600">Vigentes</div>
           </CardContent>
@@ -206,7 +280,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
       {/* Main Tabs */}
       <Card>
         <CardContent className="p-0">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v)}>
             <div className="border-b border-gray-200 px-6 pt-6">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="education" className="flex items-center gap-2">
@@ -228,7 +302,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                   <h3 className="font-bold text-lg text-gray-900">Tu Formación Académica</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <AnimatePresence>
-                      {data.education.map((edu: any, index: number) => (
+                      {(data.education as Education[]).map((edu, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, scale: 0.95 }}
@@ -244,7 +318,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                                 <h4 className="font-bold text-gray-900 mb-1">{edu.degree}</h4>
                                 <p className="text-emerald-700 font-medium mb-1">{edu.institution}</p>
                                 {edu.field && <p className="text-sm text-gray-600 mb-2">{edu.field}</p>}
-                                
+
                                 <div className="flex flex-wrap gap-2">
                                   {edu.year && (
                                     <Badge variant="outline" className="text-xs">
@@ -266,7 +340,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                                 </div>
                               </div>
                             </div>
-                            
+
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 variant="ghost"
@@ -307,16 +381,13 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                       <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <BookOpen className="h-8 w-8 text-emerald-600" />
                       </div>
-                      <Button 
-                        onClick={() => setShowEducationForm(true)}
-                        className="bg-gradient-to-r from-emerald-500 to-teal-500"
-                      >
+                      <Button onClick={() => setShowEducationForm(true)} className="bg-gradient-to-r from-emerald-500 to-teal-500">
                         <Plus className="h-4 w-4 mr-2" />
                         Agregar Educación
                       </Button>
                     </div>
                   ) : (
-                    <EducationForm 
+                    <EducationForm
                       currentEducation={currentEducation}
                       setCurrentEducation={setCurrentEducation}
                       degreeTypes={degreeTypes}
@@ -337,7 +408,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                   <h3 className="font-bold text-lg text-gray-900">Tus Certificaciones</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <AnimatePresence>
-                      {data.certifications.map((cert: any, index: number) => (
+                      {(data.certifications as Certification[]).map((cert, index) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, scale: 0.95 }}
@@ -353,12 +424,10 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                               </div>
                               <div className="flex-1">
                                 <h4 className="font-bold text-gray-900 mb-1 text-sm leading-tight">{cert.name}</h4>
-                                <Badge className={`text-xs mb-2 ${getCertificationBadgeColor(cert.issuer)}`}>
-                                  {cert.issuer}
-                                </Badge>
+                                <Badge className={`text-xs mb-2 ${getCertificationBadgeColor(cert.issuer)}`}>{cert.issuer}</Badge>
                               </div>
                             </div>
-                            
+
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <Button
                                 variant="ghost"
@@ -378,7 +447,7 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                               </Button>
                             </div>
                           </div>
-                          
+
                           <div className="space-y-2 text-xs">
                             {cert.year && (
                               <div className="flex items-center gap-1 text-gray-600">
@@ -387,26 +456,18 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                               </div>
                             )}
                             {cert.expiryDate && (
-                              <div className={`flex items-center gap-1 ${
-                                isExpired(cert.expiryDate) ? 'text-red-600' : 'text-green-600'
-                              }`}>
+                              <div className={`flex items-center gap-1 ${isExpired(cert.expiryDate) ? "text-red-600" : "text-green-600"}`}>
                                 <Calendar className="h-3 w-3" />
-                                <span>
-                                  {isExpired(cert.expiryDate) ? 'Expirada' : 'Vigente hasta'} {cert.expiryDate}
-                                </span>
+                                <span>{isExpired(cert.expiryDate) ? "Expirada" : "Vigente hasta"} {cert.expiryDate}</span>
                               </div>
                             )}
-                            {cert.credentialId && (
-                              <div className="font-mono bg-white px-2 py-1 rounded text-xs">
-                                ID: {cert.credentialId}
-                              </div>
-                            )}
+                            {cert.credentialId && <div className="font-mono bg-white px-2 py-1 rounded text-xs">ID: {cert.credentialId}</div>}
                             {cert.verificationUrl && (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 className="text-xs h-6 w-full"
-                                onClick={() => window.open(cert.verificationUrl, '_blank')}
+                                onClick={() => window.open(cert.verificationUrl, "_blank")}
                               >
                                 🔗 Verificar
                               </Button>
@@ -433,16 +494,13 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
                       <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <Award className="h-8 w-8 text-purple-600" />
                       </div>
-                      <Button 
-                        onClick={() => setShowCertificationForm(true)}
-                        className="bg-gradient-to-r from-purple-500 to-pink-500"
-                      >
+                      <Button onClick={() => setShowCertificationForm(true)} className="bg-gradient-to-r from-purple-500 to-pink-500">
                         <Plus className="h-4 w-4 mr-2" />
                         Agregar Certificación
                       </Button>
                     </div>
                   ) : (
-                    <CertificationForm 
+                    <CertificationForm
                       currentCertification={currentCertification}
                       setCurrentCertification={setCurrentCertification}
                       topProviders={topCertificationProviders}
@@ -461,31 +519,46 @@ export function DashboardEducationStep({ data, updateData, addXP }: DashboardEdu
   );
 }
 
-// Education Form Component
-function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onSave, onCancel, isEditing }) {
+/* =========================
+   Sub-componentes tipados
+   ========================= */
+
+type EducationFormProps = {
+  currentEducation: Education;
+  setCurrentEducation: React.Dispatch<React.SetStateAction<Education>>;
+  degreeTypes: Degree[];
+  onSave: () => void;
+  onCancel: () => void;
+  isEditing: boolean;
+};
+
+function EducationForm({
+  currentEducation,
+  setCurrentEducation,
+  degreeTypes,
+  onSave,
+  onCancel,
+  isEditing,
+}: EducationFormProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Institución *</Label>
           <Input
             placeholder="Universidad/Instituto"
             value={currentEducation.institution}
-            onChange={(e) => setCurrentEducation(prev => ({ ...prev, institution: e.target.value }))}
+            onChange={(e) => setCurrentEducation((prev) => ({ ...prev, institution: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
           <Label>Título/Grado *</Label>
-          <Select onValueChange={(value) => setCurrentEducation(prev => ({ ...prev, degree: value }))}>
+          <Select onValueChange={(value) => setCurrentEducation((prev) => ({ ...prev, degree: value }))}>
             <SelectTrigger>
               <SelectValue placeholder="Selecciona el grado" />
             </SelectTrigger>
             <SelectContent>
-              {degreeTypes.map(degree => (
+              {degreeTypes.map((degree) => (
                 <SelectItem key={degree} value={degree}>
                   {getDegreeIcon(degree)} {degree}
                 </SelectItem>
@@ -494,14 +567,14 @@ function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onS
           </Select>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Campo de estudio</Label>
           <Input
             placeholder="Ej: Ingeniería en Sistemas"
             value={currentEducation.field}
-            onChange={(e) => setCurrentEducation(prev => ({ ...prev, field: e.target.value }))}
+            onChange={(e) => setCurrentEducation((prev) => ({ ...prev, field: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -510,7 +583,7 @@ function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onS
             type="number"
             placeholder="2024"
             value={currentEducation.year}
-            onChange={(e) => setCurrentEducation(prev => ({ ...prev, year: e.target.value }))}
+            onChange={(e) => setCurrentEducation((prev) => ({ ...prev, year: e.target.value }))}
           />
         </div>
       </div>
@@ -521,7 +594,7 @@ function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onS
           <Input
             placeholder="Ciudad, País"
             value={currentEducation.location}
-            onChange={(e) => setCurrentEducation(prev => ({ ...prev, location: e.target.value }))}
+            onChange={(e) => setCurrentEducation((prev) => ({ ...prev, location: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -529,7 +602,7 @@ function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onS
           <Input
             placeholder="Ej: Cum Laude, Mención Honorífica"
             value={currentEducation.honors}
-            onChange={(e) => setCurrentEducation(prev => ({ ...prev, honors: e.target.value }))}
+            onChange={(e) => setCurrentEducation((prev) => ({ ...prev, honors: e.target.value }))}
           />
         </div>
       </div>
@@ -538,7 +611,7 @@ function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onS
         <Button onClick={onCancel} variant="outline">
           Cancelar
         </Button>
-        <Button 
+        <Button
           onClick={onSave}
           className="bg-gradient-to-r from-emerald-500 to-teal-500"
           disabled={!currentEducation.institution || !currentEducation.degree}
@@ -550,44 +623,57 @@ function EducationForm({ currentEducation, setCurrentEducation, degreeTypes, onS
   );
 }
 
-// Certification Form Component  
-function CertificationForm({ currentCertification, setCurrentCertification, topProviders, onSave, onCancel, isEditing }) {
+type CertificationFormProps = {
+  currentCertification: Certification;
+  setCurrentCertification: React.Dispatch<React.SetStateAction<Certification>>;
+  topProviders: string[];
+  onSave: () => void;
+  onCancel: () => void;
+  isEditing: boolean;
+};
+
+function CertificationForm({
+  currentCertification,
+  setCurrentCertification,
+  topProviders,
+  onSave,
+  onCancel,
+  isEditing,
+}: CertificationFormProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4"
-    >
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Nombre de la certificación *</Label>
           <Input
             placeholder="Ej: AWS Solutions Architect"
             value={currentCertification.name}
-            onChange={(e) => setCurrentCertification(prev => ({ ...prev, name: e.target.value }))}
+            onChange={(e) => setCurrentCertification((prev) => ({ ...prev, name: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
           <Label>Emisor *</Label>
-          <Select onValueChange={(value) => setCurrentCertification(prev => ({ ...prev, issuer: value }))}>
+          <Select onValueChange={(value) => setCurrentCertification((prev) => ({ ...prev, issuer: value }))}>
             <SelectTrigger>
               <SelectValue placeholder="Selecciona o escribe" />
             </SelectTrigger>
             <SelectContent>
-              {topProviders.map(provider => (
-                <SelectItem key={provider} value={provider}>{provider}</SelectItem>
+              {topProviders.map((provider) => (
+                <SelectItem key={provider} value={provider}>
+                  {provider}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Input
             placeholder="O escribe otro emisor"
             value={currentCertification.issuer}
-            onChange={(e) => setCurrentCertification(prev => ({ ...prev, issuer: e.target.value }))}
+            onChange={(e) => setCurrentCertification((prev) => ({ ...prev, issuer: e.target.value }))}
             className="mt-2"
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Año de obtención</Label>
@@ -595,7 +681,7 @@ function CertificationForm({ currentCertification, setCurrentCertification, topP
             type="number"
             placeholder="2024"
             value={currentCertification.year}
-            onChange={(e) => setCurrentCertification(prev => ({ ...prev, year: e.target.value }))}
+            onChange={(e) => setCurrentCertification((prev) => ({ ...prev, year: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -603,7 +689,7 @@ function CertificationForm({ currentCertification, setCurrentCertification, topP
           <Input
             placeholder="ID o número"
             value={currentCertification.credentialId}
-            onChange={(e) => setCurrentCertification(prev => ({ ...prev, credentialId: e.target.value }))}
+            onChange={(e) => setCurrentCertification((prev) => ({ ...prev, credentialId: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -611,7 +697,7 @@ function CertificationForm({ currentCertification, setCurrentCertification, topP
           <Input
             type="date"
             value={currentCertification.expiryDate}
-            onChange={(e) => setCurrentCertification(prev => ({ ...prev, expiryDate: e.target.value }))}
+            onChange={(e) => setCurrentCertification((prev) => ({ ...prev, expiryDate: e.target.value }))}
           />
         </div>
       </div>
@@ -621,7 +707,7 @@ function CertificationForm({ currentCertification, setCurrentCertification, topP
         <Input
           placeholder="https://..."
           value={currentCertification.verificationUrl}
-          onChange={(e) => setCurrentCertification(prev => ({ ...prev, verificationUrl: e.target.value }))}
+          onChange={(e) => setCurrentCertification((prev) => ({ ...prev, verificationUrl: e.target.value }))}
         />
       </div>
 
@@ -629,7 +715,7 @@ function CertificationForm({ currentCertification, setCurrentCertification, topP
         <Button onClick={onCancel} variant="outline">
           Cancelar
         </Button>
-        <Button 
+        <Button
           onClick={onSave}
           className="bg-gradient-to-r from-purple-500 to-pink-500"
           disabled={!currentCertification.name || !currentCertification.issuer}
@@ -639,18 +725,4 @@ function CertificationForm({ currentCertification, setCurrentCertification, topP
       </div>
     </motion.div>
   );
-}
-
-function getDegreeIcon(degree: string) {
-  const icons = {
-    "Técnico": "🔧",
-    "Licenciatura": "🎓",
-    "Ingeniería": "⚙️", 
-    "Maestría": "🎖️",
-    "Doctorado": "👨‍🎓",
-    "Bootcamp": "⚡",
-    "Certificado": "📜",
-    "Diplomado": "📋"
-  };
-  return icons[degree] || "📚";
 }

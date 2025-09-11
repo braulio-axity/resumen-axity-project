@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Code2, Plus, X, Search, Sparkles, TrendingUp, Zap, Filter, Grid3X3, List } from "lucide-react";
+import { Plus, X, Search, Sparkles, TrendingUp, Zap, Grid3X3, List } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface DashboardTechnicalSkillsStepProps {
@@ -13,6 +13,17 @@ interface DashboardTechnicalSkillsStepProps {
   updateData: (field: string, value: any) => void;
   addXP: (points: number, achievement?: string) => void;
 }
+
+type Skill = { name: string; level: string; category?: string };
+
+const levels = {
+  Principiante: { color: "...", icon: "🌱", bgColor: "...", textColor: "..." },
+  Intermedio:   { color: "...", icon: "⚡", bgColor: "...", textColor: "..." },
+  Avanzado:     { color: "...", icon: "🚀", bgColor: "...", textColor: "..." },
+  Expert:       { color: "...", icon: "⭐", bgColor: "...", textColor: "..." },
+} as const;
+
+type LevelKey = keyof typeof levels;
 
 export function DashboardTechnicalSkillsStep({ data, updateData, addXP }: DashboardTechnicalSkillsStepProps) {
   const [newSkill, setNewSkill] = useState("");
@@ -87,31 +98,12 @@ export function DashboardTechnicalSkillsStep({ data, updateData, addXP }: Dashbo
     }
   };
 
-  const getSkillLevelData = (level: string) => {
-    const levels = {
-      "Principiante": { 
-        color: "from-yellow-400 to-orange-400", 
-        icon: "🌱", 
-        bgColor: "bg-yellow-50 text-yellow-800 border-yellow-200" 
-      },
-      "Intermedio": { 
-        color: "from-blue-400 to-indigo-400", 
-        icon: "⚡", 
-        bgColor: "bg-blue-50 text-blue-800 border-blue-200" 
-      },
-      "Avanzado": { 
-        color: "from-green-400 to-emerald-400", 
-        icon: "🚀", 
-        bgColor: "bg-green-50 text-green-800 border-green-200" 
-      },
-      "Expert": { 
-        color: "from-purple-400 to-pink-400", 
-        icon: "⭐", 
-        bgColor: "bg-purple-50 text-purple-800 border-purple-200" 
-      },
-    };
-    return levels[level] || levels["Intermedio"];
-  };
+  function getSkillLevelData(level: string) {
+    const key: LevelKey = (Object.keys(levels) as LevelKey[]).includes(level as LevelKey)
+      ? (level as LevelKey)
+      : "Intermedio";
+    return levels[key];
+  }
 
   const filteredSkills = popularSkills.filter(skill => {
     const matchesSearch = !searchTerm || skill.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -121,9 +113,9 @@ export function DashboardTechnicalSkillsStep({ data, updateData, addXP }: Dashbo
 
   const groupedUserSkills = () => {
     const skills = data.skills || [];
-    const grouped = {};
     
-    skills.forEach(skill => {
+    const grouped: Record<string, Skill[]> = {};
+    skills.forEach((skill: Skill) => {
       const category = skill.category || "other";
       if (!grouped[category]) grouped[category] = [];
       grouped[category].push(skill);
@@ -147,7 +139,7 @@ export function DashboardTechnicalSkillsStep({ data, updateData, addXP }: Dashbo
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-3xl font-bold text-blue-600 mb-1">
-              {data.skills?.filter(s => s.level === "Expert").length || 0}
+              {data.skills?.filter((s: Skill) => s.level === "Expert").length || 0}
             </div>
             <div className="text-sm text-gray-600">Nivel Expert</div>
           </CardContent>
@@ -258,12 +250,12 @@ export function DashboardTechnicalSkillsStep({ data, updateData, addXP }: Dashbo
               {["Expert", "Avanzado", "Intermedio", "Principiante"].map(level => (
                 <TabsContent key={level} value={level} className="mt-6">
                   <SkillsDisplay 
-                    skills={(data.skills || []).filter(skill => skill.level === level)} 
+                    skills={(data.skills || []).filter((skill: Skill) => skill.level === level)}
                     viewMode={viewMode}
-                    onRemove={(index) => {
+                    onRemove={(index: number) => {
                       const allSkills = data.skills || [];
-                      const skillToRemove = allSkills.filter(s => s.level === level)[index];
-                      const originalIndex = allSkills.findIndex(s => s === skillToRemove);
+                      const skillToRemove = allSkills.filter((s: Skill) => s.level === level)[index];
+                      const originalIndex = allSkills.findIndex((s: Skill) => s === skillToRemove);
                       removeSkill(originalIndex);
                     }}
                     getSkillLevelData={getSkillLevelData}
@@ -364,7 +356,17 @@ export function DashboardTechnicalSkillsStep({ data, updateData, addXP }: Dashbo
 }
 
 // Skills Display Component
-function SkillsDisplay({ skills, viewMode, onRemove, getSkillLevelData }) {
+function SkillsDisplay({
+  skills,
+  viewMode,
+  onRemove,
+  getSkillLevelData,
+}: {
+  skills: Skill[];
+  viewMode: "grid" | "list";
+  onRemove: (index: number) => void;
+  getSkillLevelData: (level: string) => { color: string; icon: string; bgColor: string; textColor: string };
+}) {
   if (viewMode === "list") {
     return (
       <div className="space-y-3">

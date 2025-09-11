@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Badge } from "./ui/badge";
-import { GraduationCap, Award, Plus, Edit3, Trash2, BookOpen, Calendar, Star, Zap } from "lucide-react";
+import { GraduationCap, Award, Edit3, Trash2, BookOpen, Calendar, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface WizardEducationStepProps {
@@ -118,7 +118,7 @@ export function WizardEducationStep({ data, updateData, addXP }: WizardEducation
       "Bootcamp": "⚡",
       "Certificado": "📜"
     };
-    return icons[degree] || "📚";
+    return (icons as Record<string, string>)[degree] ?? "📚";
   };
 
   const getCertificationBadgeColor = (issuer: string) => {

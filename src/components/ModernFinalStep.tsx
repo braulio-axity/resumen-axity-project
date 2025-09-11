@@ -2,24 +2,57 @@ import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { 
-  CheckCircle, 
-  Rocket, 
-  User, 
-  Code2, 
-  Briefcase, 
-  Award, 
+import {
+  CheckCircle,
+  Rocket,
+  User,
+  Code2,
+  Briefcase,
+  Award,
   Sparkles,
   TrendingUp,
   Target,
   Calendar,
   Mail,
-  MapPin
+  MapPin,
 } from "lucide-react";
 import { motion } from "motion/react";
 
+/** === Tipos auxiliares (ajústalos si ya tienes un types.ts) === */
+type SkillCategory =
+  | "frontend"
+  | "backend"
+  | "database"
+  | "cloud"
+  | "design"
+  | "data"
+  | "other";
+
+type Skill = {
+  name: string;
+  category?: SkillCategory | string; // por si llega algo fuera del union
+};
+
+type Experience = {
+  position: string;
+  company: string;
+  current?: boolean;
+};
+
+type FormDataShape = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  employeeId?: string;
+  location?: string;
+  skills?: Skill[];
+  experiences?: Experience[];
+  education?: unknown[];
+  certifications?: unknown[];
+};
+
 interface ModernFinalStepProps {
-  data: any;
+  data: FormDataShape; // en tu proyecto puedes importar el tipo real
   onSubmit: () => void;
   isSubmitting: boolean;
 }
@@ -38,44 +71,74 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
   const totalSections = 4;
   const completedSections = [
     stats.skills > 0,
-    stats.experiences > 0, 
+    stats.experiences > 0,
     stats.education > 0,
-    stats.certifications > 0
+    stats.certifications > 0,
   ].filter(Boolean).length;
-  
+
   const completionPercentage = (completedSections / totalSections) * 100;
 
   const getCompletionLevel = () => {
-    if (completionPercentage === 100) return { label: "Perfil Completo", color: "text-green-600", bg: "bg-green-50" };
-    if (completionPercentage >= 75) return { label: "Casi Completo", color: "text-blue-600", bg: "bg-blue-50" };
-    if (completionPercentage >= 50) return { label: "En Progreso", color: "text-yellow-600", bg: "bg-yellow-50" };
+    if (completionPercentage === 100)
+      return { label: "Perfil Completo", color: "text-green-600", bg: "bg-green-50" };
+    if (completionPercentage >= 75)
+      return { label: "Casi Completo", color: "text-blue-600", bg: "bg-blue-50" };
+    if (completionPercentage >= 50)
+      return { label: "En Progreso", color: "text-yellow-600", bg: "bg-yellow-50" };
     return { label: "Necesita Atención", color: "text-red-600", bg: "bg-red-50" };
   };
 
   const completion = getCompletionLevel();
 
+  /** Agrupa skills por categoría con tipos seguros */
   const getSkillCategories = () => {
-    if (!data.skills) return {};
-    
-    const categories = {};
-    data.skills.forEach(skill => {
-      const category = skill.category || 'other';
-      if (!categories[category]) categories[category] = [];
+    // Inicializamos todas las categorías para evitar undefined
+    const categories: Record<SkillCategory, Skill[]> = {
+      frontend: [],
+      backend: [],
+      database: [],
+      cloud: [],
+      design: [],
+      data: [],
+      other: [],
+    };
+
+    (data.skills ?? []).forEach((skill: Skill) => {
+      const cat = (skill.category ?? "other") as SkillCategory;
+      const category: SkillCategory = [
+        "frontend",
+        "backend",
+        "database",
+        "cloud",
+        "design",
+        "data",
+        "other",
+      ].includes(cat)
+        ? (cat as SkillCategory)
+        : "other";
+
       categories[category].push(skill);
     });
-    
+
     return categories;
   };
 
   const skillCategories = getSkillCategories();
 
+  const categoryNames: Record<SkillCategory, string> = {
+    frontend: "Frontend",
+    backend: "Backend",
+    database: "Base de Datos",
+    cloud: "Cloud & DevOps",
+    design: "Design & UX",
+    data: "Data & Analytics",
+    other: "Otras",
+  };
+
   return (
     <div className="space-y-6">
       {/* Success Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 shadow-xl">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-4">
@@ -94,21 +157,15 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
       </motion.div>
 
       {/* Completion Overview */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-semibold mb-2">Estado de Completitud</h3>
                 <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full ${completion.bg}`}>
-                  <div className={`w-2 h-2 rounded-full ${completion.color.replace('text-', 'bg-')}`} />
-                  <span className={`text-sm font-medium ${completion.color}`}>
-                    {completion.label}
-                  </span>
+                  <div className={`w-2 h-2 rounded-full ${completion.color.replace("text-", "bg-")}`} />
+                  <span className={`text-sm font-medium ${completion.color}`}>{completion.label}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -120,7 +177,9 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
             <div className="mb-6">
               <Progress value={completionPercentage} className="h-3" />
               <div className="flex justify-between text-sm text-muted-foreground mt-2">
-                <span>{completedSections} de {totalSections} secciones</span>
+                <span>
+                  {completedSections} de {totalSections} secciones
+                </span>
                 <span>{completionPercentage === 100 ? "¡Excelente!" : "Continúa agregando información"}</span>
               </div>
             </div>
@@ -132,21 +191,21 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
                 <div className="text-sm text-blue-700">Habilidades</div>
                 {stats.skills === 0 && <div className="text-xs text-blue-600 mt-1">Recomendado: 5+</div>}
               </div>
-              
+
               <div className="text-center p-4 bg-orange-50 rounded-xl border border-orange-200">
                 <Briefcase className="h-8 w-8 mx-auto mb-2 text-orange-600" />
                 <div className="text-2xl font-bold text-orange-900">{stats.experiences}</div>
                 <div className="text-sm text-orange-700">Experiencias</div>
                 {stats.experiences === 0 && <div className="text-xs text-orange-600 mt-1">Mínimo: 1</div>}
               </div>
-              
+
               <div className="text-center p-4 bg-emerald-50 rounded-xl border border-emerald-200">
                 <Award className="h-8 w-8 mx-auto mb-2 text-emerald-600" />
                 <div className="text-2xl font-bold text-emerald-900">{stats.education}</div>
                 <div className="text-sm text-emerald-700">Educación</div>
                 {stats.education === 0 && <div className="text-xs text-emerald-600 mt-1">Opcional</div>}
               </div>
-              
+
               <div className="text-center p-4 bg-purple-50 rounded-xl border border-purple-200">
                 <Sparkles className="h-8 w-8 mx-auto mb-2 text-purple-600" />
                 <div className="text-2xl font-bold text-purple-900">{stats.certifications}</div>
@@ -159,11 +218,7 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
       </motion.div>
 
       {/* Profile Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <h3 className="text-xl font-semibold flex items-center gap-2">
@@ -178,7 +233,9 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{data.firstName} {data.lastName}</span>
+                  <span className="font-medium">
+                    {data.firstName} {data.lastName}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-muted-foreground" />
@@ -191,7 +248,7 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm">
-                    {data.location === 'cdmx' ? 'Ciudad de México' : data.location}
+                    {data.location === "cdmx" ? "Ciudad de México" : data.location}
                   </span>
                 </div>
               </div>
@@ -205,43 +262,33 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
                   Stack Tecnológico Principal
                 </h4>
                 <div className="space-y-3">
-                  {Object.entries(skillCategories).map(([category, skills]) => {
-                    if (!skills.length) return null;
-                    
-                    const categoryNames = {
-                      frontend: "Frontend",
-                      backend: "Backend", 
-                      database: "Base de Datos",
-                      cloud: "Cloud & DevOps",
-                      design: "Design & UX",
-                      data: "Data & Analytics",
-                      other: "Otras"
-                    };
-                    
-                    return (
-                      <div key={category} className="bg-blue-50 p-3 rounded-lg">
-                        <div className="text-sm font-medium text-blue-900 mb-2">
-                          {categoryNames[category] || "Otras"}
+                  {(Object.entries(skillCategories) as [SkillCategory, Skill[]][])
+                    .map(([category, skills]) => {
+                      if (!skills.length) return null;
+                      return (
+                        <div key={category} className="bg-blue-50 p-3 rounded-lg">
+                          <div className="text-sm font-medium text-blue-900 mb-2">
+                            {categoryNames[category]}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {skills.slice(0, 6).map((skill, index) => (
+                              <Badge
+                                key={`${skill.name}-${index}`}
+                                variant="secondary"
+                                className="bg-white text-blue-800 border-blue-200"
+                              >
+                                {skill.name}
+                              </Badge>
+                            ))}
+                            {skills.length > 6 && (
+                              <Badge variant="outline" className="border-blue-300 text-blue-700">
+                                +{skills.length - 6} más
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          {skills.slice(0, 6).map((skill, index) => (
-                            <Badge 
-                              key={index} 
-                              variant="secondary"
-                              className="bg-white text-blue-800 border-blue-200"
-                            >
-                              {skill.name}
-                            </Badge>
-                          ))}
-                          {skills.length > 6 && (
-                            <Badge variant="outline" className="border-blue-300 text-blue-700">
-                              +{skills.length - 6} más
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -257,9 +304,7 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
                   <div className="font-medium text-orange-900">{data.experiences[0].position}</div>
                   <div className="text-orange-700">{data.experiences[0].company}</div>
                   {data.experiences[0].current && (
-                    <Badge className="mt-2 bg-green-100 text-green-800 border-green-200">
-                      Posición Actual
-                    </Badge>
+                    <Badge className="mt-2 bg-green-100 text-green-800 border-green-200">Posición Actual</Badge>
                   )}
                 </div>
               </div>
@@ -295,11 +340,7 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
       </motion.div>
 
       {/* Submit Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card className="bg-axity-gradient-primary text-white shadow-2xl">
           <CardContent className="p-8 text-center">
             <motion.div
@@ -309,13 +350,13 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
             >
               <Rocket className="h-12 w-12" />
             </motion.div>
-            
+
             <h3 className="text-2xl font-bold mb-2">¿Listo para el Lanzamiento?</h3>
             <p className="text-white/90 mb-6 max-w-2xl mx-auto">
-              Tu perfil profesional actualizado será visible para Project Managers y Tech Leads de Axity. 
+              Tu perfil profesional actualizado será visible para Project Managers y Tech Leads de Axity.
               Esto nos permitirá conectarte con proyectos que se alineen perfectamente con tu experiencia y objetivos de carrera.
             </p>
-            
+
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="flex items-center gap-2 text-white/80">
                 <CheckCircle className="h-4 w-4" />
@@ -326,19 +367,15 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
                 <span className="text-sm">Actualización automática</span>
               </div>
             </div>
-            
-            <Button 
-              onClick={onSubmit} 
-              size="lg" 
+
+            <Button
+              onClick={onSubmit}
+              size="lg"
               disabled={isSubmitting}
               className="bg-white text-[var(--axity-purple)] hover:bg-white/90 font-semibold shadow-lg px-8 py-3"
             >
               {isSubmitting ? (
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="mr-2"
-                >
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="mr-2">
                   <Sparkles className="h-5 w-5" />
                 </motion.div>
               ) : (
@@ -351,17 +388,12 @@ export function ModernFinalStep({ data, onSubmit, isSubmitting }: ModernFinalSte
       </motion.div>
 
       {/* Legal Notice */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="text-center"
-      >
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="text-center">
         <Card className="bg-gray-50/80 backdrop-blur-sm border-gray-200">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">
-              Al actualizar tu perfil, confirmas que la información proporcionada es veraz y actual. 
-              Este perfil será utilizado exclusivamente para asignación de proyectos y desarrollo 
+              Al actualizar tu perfil, confirmas que la información proporcionada es veraz y actual.
+              Este perfil será utilizado exclusivamente para asignación de proyectos y desarrollo
               profesional dentro de Axity, siguiendo nuestras políticas de privacidad.
             </p>
           </CardContent>

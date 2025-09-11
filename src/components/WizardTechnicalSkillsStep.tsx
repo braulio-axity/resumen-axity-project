@@ -13,12 +13,49 @@ interface WizardTechnicalSkillsStepProps {
   addXP: (points: number, achievement?: string) => void;
 }
 
+/** === Tipos fuertes === */
+const LEVELS = ["Principiante", "Intermedio", "Avanzado", "Expert"] as const;
+type LevelKey = typeof LEVELS[number];
+
+type Skill = { name: string; level: LevelKey };
+type PopularSkill = {
+  name: string;
+  category: "Frontend" | "Backend" | "Cloud" | "DevOps" | "Database" | "API" | string;
+  trending: boolean;
+};
+
+type LevelMeta = { color: string; icon: string; bgColor: string };
+
+/** Meta por nivel (tipado) */
+const LEVEL_META: Record<LevelKey, LevelMeta> = {
+  Principiante: {
+    color: "from-yellow-400 to-orange-400",
+    icon: "🌱",
+    bgColor: "bg-yellow-50 border-yellow-200 text-yellow-800",
+  },
+  Intermedio: {
+    color: "from-blue-400 to-indigo-400",
+    icon: "⚡",
+    bgColor: "bg-blue-50 border-blue-200 text-blue-800",
+  },
+  Avanzado: {
+    color: "from-green-400 to-emerald-400",
+    icon: "🚀",
+    bgColor: "bg-green-50 border-green-200 text-green-800",
+  },
+  Expert: {
+    color: "from-purple-400 to-pink-400",
+    icon: "⭐",
+    bgColor: "bg-purple-50 border-purple-200 text-purple-800",
+  },
+};
+
 export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTechnicalSkillsStepProps) {
   const [newSkill, setNewSkill] = useState("");
-  const [skillLevel, setSkillLevel] = useState("");
+  const [skillLevel, setSkillLevel] = useState<LevelKey | "">("");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const popularSkills = [
+  const popularSkills: PopularSkill[] = [
     { name: "React", category: "Frontend", trending: true },
     { name: "TypeScript", category: "Frontend", trending: true },
     { name: "Node.js", category: "Backend", trending: false },
@@ -37,68 +74,45 @@ export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTec
     { name: "Redis", category: "Database", trending: false },
   ];
 
+  /** Safe getter para meta por nivel (evita TS7053) */
+  const getSkillLevelData = (level: string): LevelMeta => {
+    const key = (LEVELS as readonly string[]).includes(level) ? (level as LevelKey) : "Intermedio";
+    return LEVEL_META[key];
+  };
+
   const addSkill = () => {
     if (newSkill && skillLevel) {
-      const skills = data.skills || [];
-      const newSkillObj = { name: newSkill, level: skillLevel };
+      const skills: Skill[] = (data.skills || []) as Skill[];
+      const newSkillObj: Skill = { name: newSkill, level: skillLevel as LevelKey };
       updateData("skills", [...skills, newSkillObj]);
       setNewSkill("");
       setSkillLevel("");
       addXP(15);
 
-      if (skills.length + 1 === 5) {
-        addXP(25, "Stack Builder");
-      } else if (skills.length + 1 === 10) {
-        addXP(50, "Tech Wizard");
-      }
+      if (skills.length + 1 === 5) addXP(25, "Stack Builder");
+      else if (skills.length + 1 === 10) addXP(50, "Tech Wizard");
     }
   };
 
   const removeSkill = (index: number) => {
-    const skills = data.skills || [];
-    updateData("skills", skills.filter((_: any, i: number) => i !== index));
+    const skills: Skill[] = (data.skills || []) as Skill[];
+    updateData("skills", skills.filter((_, i) => i !== index));
   };
 
   const addPopularSkill = (skillName: string) => {
-    const skills = data.skills || [];
-    if (!skills.some((s: any) => s.name === skillName)) {
-      const newSkillObj = { name: skillName, level: "Intermedio" };
+    const skills: Skill[] = (data.skills || []) as Skill[];
+    if (!skills.some((s) => s.name === skillName)) {
+      const newSkillObj: Skill = { name: skillName, level: "Intermedio" };
       updateData("skills", [...skills, newSkillObj]);
       addXP(10);
     }
   };
 
-  const getSkillLevelData = (level: string) => {
-    const levels = {
-      "Principiante": { 
-        color: "from-yellow-400 to-orange-400", 
-        icon: "🌱", 
-        bgColor: "bg-yellow-50 border-yellow-200 text-yellow-800" 
-      },
-      "Intermedio": { 
-        color: "from-blue-400 to-indigo-400", 
-        icon: "⚡", 
-        bgColor: "bg-blue-50 border-blue-200 text-blue-800" 
-      },
-      "Avanzado": { 
-        color: "from-green-400 to-emerald-400", 
-        icon: "🚀", 
-        bgColor: "bg-green-50 border-green-200 text-green-800" 
-      },
-      "Expert": { 
-        color: "from-purple-400 to-pink-400", 
-        icon: "⭐", 
-        bgColor: "bg-purple-50 border-purple-200 text-purple-800" 
-      },
-    };
-    return levels[level] || levels["Intermedio"];
-  };
-
-  const filteredSkills = popularSkills.filter(skill => 
-    !searchTerm || skill.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSkills: PopularSkill[] = popularSkills.filter(
+    (skill) => !searchTerm || skill.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const skillCount = data.skills?.length || 0;
+  const skillCount = (data.skills?.length as number) || 0;
 
   return (
     <div className="space-y-8">
@@ -125,7 +139,7 @@ export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTec
             </div>
             <h3 className="font-semibold text-lg">Agregar Nueva Habilidad</h3>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
               placeholder="Ej: React, Python, Docker..."
@@ -133,7 +147,7 @@ export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTec
               onChange={(e) => setNewSkill(e.target.value)}
               className="bg-white shadow-sm"
             />
-            <Select onValueChange={setSkillLevel} value={skillLevel}>
+            <Select onValueChange={(v) => setSkillLevel(v as LevelKey)} value={skillLevel}>
               <SelectTrigger className="bg-white shadow-sm">
                 <SelectValue placeholder="Selecciona nivel" />
               </SelectTrigger>
@@ -144,8 +158,8 @@ export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTec
                 <SelectItem value="Expert">⭐ Expert</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
-              onClick={addSkill} 
+            <Button
+              onClick={addSkill}
               disabled={!newSkill || !skillLevel}
               className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:opacity-90 shadow-lg"
             >
@@ -157,32 +171,27 @@ export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTec
       </Card>
 
       {/* Current Skills */}
-      {data.skills && data.skills.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+      {data.skills && (data.skills as Skill[]).length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="shadow-lg">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-yellow-500" />
-                  Tu Stack Tecnológico ({data.skills.length})
+                  Tu Stack Tecnológico ({(data.skills as Skill[]).length})
                 </h3>
-                {data.skills.length >= 5 && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200">
-                    🎯 Stack Sólido
-                  </Badge>
+                {(data.skills as Skill[]).length >= 5 && (
+                  <Badge className="bg-green-100 text-green-800 border-green-200">🎯 Stack Sólido</Badge>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <AnimatePresence>
-                  {data.skills.map((skill: any, index: number) => {
+                  {(data.skills as Skill[]).map((skill, index) => {
                     const levelData = getSkillLevelData(skill.level);
                     return (
                       <motion.div
-                        key={index}
+                        key={`${skill.name}-${index}`}
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0, opacity: 0 }}
@@ -232,27 +241,23 @@ export function WizardTechnicalSkillsStep({ data, updateData, addXP }: WizardTec
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {filteredSkills.map((skill) => {
-              const isAdded = data.skills?.some((s: any) => s.name === skill.name);
+            {filteredSkills.map((skill: PopularSkill) => {
+              const isAdded = (data.skills as Skill[] | undefined)?.some((s) => s.name === skill.name);
               return (
                 <motion.button
                   key={skill.name}
                   onClick={() => !isAdded && addPopularSkill(skill.name)}
-                  disabled={isAdded}
+                  disabled={!!isAdded}
                   className={`relative p-4 rounded-xl text-left transition-all ${
                     isAdded
-                      ? 'bg-green-50 text-green-800 cursor-not-allowed border-2 border-green-200'
-                      : 'bg-white hover:bg-gray-50 text-gray-700 hover:shadow-md border-2 border-gray-100 hover:border-gray-200'
+                      ? "bg-green-50 text-green-800 cursor-not-allowed border-2 border-green-200"
+                      : "bg-white hover:bg-gray-50 text-gray-700 hover:shadow-md border-2 border-gray-100 hover:border-gray-200"
                   }`}
                   whileHover={!isAdded ? { scale: 1.02 } : {}}
                   whileTap={!isAdded ? { scale: 0.98 } : {}}
                 >
                   <div className="flex items-center gap-2 mb-1">
-                    {isAdded ? (
-                      <Zap className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <Plus className="h-4 w-4 text-gray-400" />
-                    )}
+                    {isAdded ? <Zap className="h-4 w-4 text-green-600" /> : <Plus className="h-4 w-4 text-gray-400" />}
                     <span className="font-medium text-sm">{skill.name}</span>
                   </div>
                   <div className="flex items-center gap-2">

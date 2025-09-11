@@ -5,19 +5,31 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
-import { Briefcase, Plus, Calendar, MapPin, Edit3, Trash2, Building, Users, Target } from "lucide-react";
+import { Briefcase, Plus, Calendar, Edit3, Trash2, Building, Users, Target } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface ModernExperienceStepProps {
-  data: any;
+  data: any; // si puedes, tipa esto a { experiences?: Experience[] }
   updateData: (field: string, value: any) => void;
   addXP: (points: number, achievement?: string) => void;
 }
 
+type Experience = {
+  company: string;
+  position: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  technologies: string[];
+  achievements: string[];
+  current: boolean;
+};
+
 export function ModernExperienceStep({ data, updateData, addXP }: ModernExperienceStepProps) {
   const [showForm, setShowForm] = useState(false);
-  const [editingIndex, setEditingIndex] = useState(-1);
-  const [currentExperience, setCurrentExperience] = useState({
+  const [editingIndex, setEditingIndex] = useState<number>(-1);
+
+  const [currentExperience, setCurrentExperience] = useState<Experience>({
     company: "",
     position: "",
     startDate: "",
@@ -30,36 +42,36 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
 
   const addExperience = () => {
     if (currentExperience.company && currentExperience.position) {
-      const experiences = data.experiences || [];
+      const experiences: Experience[] = (data.experiences as Experience[]) || [];
       if (editingIndex >= 0) {
-        experiences[editingIndex] = currentExperience;
-        updateData("experiences", experiences);
+        const copy = [...experiences];
+        copy[editingIndex] = currentExperience;
+        updateData("experiences", copy);
         setEditingIndex(-1);
       } else {
         updateData("experiences", [...experiences, currentExperience]);
         addXP(25);
-        
-        if (experiences.length + 1 === 1) {
-          addXP(15, "Primera Experiencia");
-        } else if (experiences.length + 1 >= 3) {
-          addXP(30, "Senior Developer");
-        }
+        const nextCount = experiences.length + 1;
+        if (nextCount === 1) addXP(15, "Primera Experiencia");
+        else if (nextCount >= 3) addXP(30, "Senior Developer");
       }
-      
       resetForm();
     }
   };
 
   const editExperience = (index: number) => {
-    const experiences = data.experiences || [];
+    const experiences: Experience[] = (data.experiences as Experience[]) || [];
     setCurrentExperience(experiences[index]);
     setEditingIndex(index);
     setShowForm(true);
   };
 
   const removeExperience = (index: number) => {
-    const experiences = data.experiences || [];
-    updateData("experiences", experiences.filter((_: any, i: number) => i !== index));
+    const experiences: Experience[] = (data.experiences as Experience[]) || [];
+    updateData(
+      "experiences",
+      experiences.filter((_, i) => i !== index)
+    );
   };
 
   const resetForm = () => {
@@ -77,21 +89,21 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
     setEditingIndex(-1);
   };
 
-  const updateCurrentExperience = (field: string, value: any) => {
+  const updateCurrentExperience = <K extends keyof Experience>(field: K, value: Experience[K]) => {
     setCurrentExperience(prev => ({ ...prev, [field]: value }));
   };
 
-  const addTechnology = (tech: string) => {
-    if (tech && !currentExperience.technologies.includes(tech)) {
-      updateCurrentExperience("technologies", [...currentExperience.technologies, tech]);
-    }
-  };
+  // const addTechnology = (tech: string) => {
+  //   if (tech && !currentExperience.technologies.includes(tech)) {
+  //     updateCurrentExperience("technologies", [...currentExperience.technologies, tech]);
+  //   }
+  // };
 
-  const addAchievement = (achievement: string) => {
-    if (achievement && !currentExperience.achievements.includes(achievement)) {
-      updateCurrentExperience("achievements", [...currentExperience.achievements, achievement]);
-    }
-  };
+  // const addAchievement = (achievement: string) => {
+  //   if (achievement && !currentExperience.achievements.includes(achievement)) {
+  //     updateCurrentExperience("achievements", [...currentExperience.achievements, achievement]);
+  //   }
+  // };
 
   const formatDateRange = (startDate: string, endDate: string, current: boolean) => {
     const formatDate = (date: string) => {
@@ -100,7 +112,6 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
       const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
       return `${months[parseInt(month) - 1]} ${year}`;
     };
-
     const start = formatDate(startDate);
     const end = current ? "Presente" : formatDate(endDate);
     return `${start} - ${end}`;
@@ -108,27 +119,19 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
 
   const calculateDuration = (startDate: string, endDate: string, current: boolean) => {
     if (!startDate) return "";
-    
     const start = new Date(startDate);
     const end = current ? new Date() : new Date(endDate);
     const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    
-    if (months < 12) {
-      return `${months} meses`;
-    } else {
-      const years = Math.floor(months / 12);
-      const remainingMonths = months % 12;
-      return remainingMonths > 0 ? `${years} años ${remainingMonths} meses` : `${years} años`;
-    }
+    if (months < 12) return `${months} meses`;
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    return remainingMonths > 0 ? `${years} años ${remainingMonths} meses` : `${years} años`;
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="bg-gradient-to-r from-white/80 to-orange-50/80 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader className="pb-4">
             <div className="flex items-center gap-4">
@@ -147,21 +150,16 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
       </motion.div>
 
       {/* Current Experiences */}
-      {data.experiences && data.experiences.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="space-y-4"
-        >
+      {data.experiences && (data.experiences as Experience[]).length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="space-y-4">
           <h3 className="font-semibold flex items-center gap-2">
             <Building className="h-5 w-5 text-[var(--axity-orange)]" />
-            Tu Experiencia ({data.experiences.length})
+            Tu Experiencia {(data.experiences as Experience[]).length ? `(${(data.experiences as Experience[]).length})` : ""}
           </h3>
-          
+
           <div className="space-y-4">
             <AnimatePresence>
-              {data.experiences.map((exp: any, index: number) => (
+              {(data.experiences as Experience[]).map((exp, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -177,9 +175,7 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="text-lg font-semibold text-gray-900">{exp.position}</h4>
                             {exp.current && (
-                              <Badge className="bg-green-100 text-green-800 border-green-200">
-                                Actual
-                              </Badge>
+                              <Badge className="bg-green-100 text-green-800 border-green-200">Actual</Badge>
                             )}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
@@ -197,32 +193,18 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => editExperience(index)}
-                            className="h-8 w-8 p-0 hover:bg-blue-100"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => editExperience(index)} className="h-8 w-8 p-0 hover:bg-blue-100">
                             <Edit3 className="h-4 w-4 text-blue-600" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeExperience(index)}
-                            className="h-8 w-8 p-0 hover:bg-red-100"
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => removeExperience(index)} className="h-8 w-8 p-0 hover:bg-red-100">
                             <Trash2 className="h-4 w-4 text-red-600" />
                           </Button>
                         </div>
                       </div>
 
-                      {exp.description && (
-                        <p className="text-sm text-gray-700 mb-4 leading-relaxed">
-                          {exp.description}
-                        </p>
-                      )}
+                      {exp.description && <p className="text-sm text-gray-700 mb-4 leading-relaxed">{exp.description}</p>}
 
                       {exp.technologies && exp.technologies.length > 0 && (
                         <div className="mb-4">
@@ -231,12 +213,8 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
                             <span className="text-sm font-medium">Tecnologías</span>
                           </div>
                           <div className="flex flex-wrap gap-2">
-                            {exp.technologies.map((tech: string, techIndex: number) => (
-                              <Badge 
-                                key={techIndex} 
-                                variant="secondary"
-                                className="bg-blue-50 text-blue-700 border-blue-200"
-                              >
+                            {exp.technologies.map((tech, techIndex) => (
+                              <Badge key={techIndex} variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
                                 {tech}
                               </Badge>
                             ))}
@@ -251,7 +229,7 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
                             <span className="text-sm font-medium">Logros</span>
                           </div>
                           <ul className="space-y-1">
-                            {exp.achievements.map((achievement: string, achIndex: number) => (
+                            {exp.achievements.map((achievement, achIndex) => (
                               <li key={achIndex} className="text-sm text-gray-700 flex items-start gap-2">
                                 <span className="text-green-500 mt-1">•</span>
                                 {achievement}
@@ -270,19 +248,11 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
       )}
 
       {/* Add/Edit Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
         {!showForm ? (
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all">
             <CardContent className="p-6">
-              <Button 
-                onClick={() => setShowForm(true)} 
-                className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 shadow-lg"
-                size="lg"
-              >
+              <Button onClick={() => setShowForm(true)} className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 shadow-lg" size="lg">
                 <Plus className="h-5 w-5 mr-2" />
                 Agregar Experiencia Profesional
               </Button>
@@ -368,18 +338,14 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
-                <Button 
+                <Button
                   onClick={addExperience}
                   className="bg-gradient-to-r from-orange-500 to-red-500 hover:opacity-90 shadow-lg"
                   disabled={!currentExperience.company || !currentExperience.position}
                 >
                   {editingIndex >= 0 ? "Actualizar" : "Guardar"} Experiencia
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={resetForm}
-                  className="border-gray-200 hover:bg-gray-50"
-                >
+                <Button variant="outline" onClick={resetForm} className="border-gray-200 hover:bg-gray-50">
                   Cancelar
                 </Button>
               </div>
@@ -389,11 +355,7 @@ export function ModernExperienceStep({ data, updateData, addXP }: ModernExperien
       </motion.div>
 
       {/* Tips */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">

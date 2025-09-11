@@ -5,19 +5,12 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { 
-  Plus,
+import {
   X,
   Code2,
   CheckCircle2,
-  AlertCircle,
-  Send,
-  Sparkles,
   Search,
-  Filter,
-  Zap,
   Layers,
   Database,
   Cloud,
@@ -26,7 +19,6 @@ import {
   Shield,
   Smartphone,
   Cpu,
-  GitBranch,
   BarChart3,
   Globe,
   ChevronDown,
@@ -59,11 +51,9 @@ export function AlternativeSkillsStep({
   updateFormData,
   addProgress,
   addMotivationalMessage,
-  streakCounter,
   setStreakCounter
 }: SkillsStepProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<string[]>(["frontend"]);
   const [showLevelSelector, setShowLevelSelector] = useState(false);
   const [selectedTech, setSelectedTech] = useState<{ name: string; category: string } | null>(null);
@@ -650,7 +640,7 @@ export function AlternativeSkillsStep({
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <AnimatePresence>
-                      {categorySkills.map((skill: any, index: number) => {
+                      {categorySkills.map((skill: any) => {
                         const level = skillLevels.find(lvl => lvl.id === skill.level);
                         const globalIndex = formData.skills.findIndex((s: any) => s.name === skill.name);
                         

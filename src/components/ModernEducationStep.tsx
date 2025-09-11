@@ -120,7 +120,7 @@ export function ModernEducationStep({ data, updateData, addXP }: ModernEducation
       "Bootcamp": "⚡",
       "Certificado": "📜"
     };
-    return icons[degree] || "📚";
+    return (icons as Record<string, string>)[degree] ?? "📚";
   };
 
   const getCertificationBadgeColor = (issuer: string) => {

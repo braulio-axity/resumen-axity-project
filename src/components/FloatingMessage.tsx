@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "motion/react";
-import { MotivationalMessage } from "../types";
+import type { MotivationalMessage } from "../types/app";
 
 interface FloatingMessageProps {
   showLatestMessage: MotivationalMessage | null;

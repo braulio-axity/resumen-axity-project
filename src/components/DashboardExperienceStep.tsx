@@ -6,7 +6,7 @@ import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
-import { Briefcase, Plus, Calendar, MapPin, Edit3, Trash2, Building, Target, Zap, Users, TrendingUp } from "lucide-react";
+import { Briefcase, Plus, Calendar, MapPin, Edit3, Trash2, Building, Target, Users, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface DashboardExperienceStepProps {
@@ -124,7 +124,7 @@ export function DashboardExperienceStep({ data, updateData, addXP }: DashboardEx
     if (!data.experiences) return "0 años";
     
     let totalMonths = 0;
-    data.experiences.forEach(exp => {
+    data.experiences.forEach((exp: any) => {
       if (exp.startDate) {
         const start = new Date(exp.startDate);
         const end = exp.current ? new Date() : new Date(exp.endDate);
@@ -155,7 +155,7 @@ export function DashboardExperienceStep({ data, updateData, addXP }: DashboardEx
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-3xl font-bold text-blue-600 mb-1">
-              {data.experiences?.filter(exp => exp.current).length || 0}
+              {data.experiences?.filter((exp: any) => exp.current).length || 0}
             </div>
             <div className="text-sm text-gray-600">Actual</div>
           </CardContent>
@@ -163,7 +163,7 @@ export function DashboardExperienceStep({ data, updateData, addXP }: DashboardEx
         <Card>
           <CardContent className="p-6 text-center">
             <div className="text-3xl font-bold text-green-600 mb-1">
-              {new Set(data.experiences?.map(exp => exp.company) || []).size}
+              {new Set((data.experiences ?? []).map((exp: any) => exp.company)).size}
             </div>
             <div className="text-sm text-gray-600">Empresas</div>
           </CardContent>
