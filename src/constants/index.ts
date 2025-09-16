@@ -260,3 +260,83 @@ export const COMPLETION_MESSAGES = [
   "¡Tu dedicación se nota! 👏",
   "¡Camino al éxito trazado! 🛤️",
 ];
+
+
+export const consultantLevels = {
+  trainee: {
+    name: "Trainee",
+    emoji: "🌱",
+    color: "text-green-600",
+    bgColor: "bg-green-100",
+  },
+  junior: {
+    name: "Junior",
+    emoji: "⚡",
+    color: "text-blue-600",
+    bgColor: "bg-blue-100",
+  },
+  consultor: {
+    name: "Consultor",
+    emoji: "🚀",
+    color: "text-[var(--axity-purple)]",
+    bgColor: "bg-purple-100",
+  },
+  avanzado: {
+    name: "Avanzado",
+    emoji: "🔥",
+    color: "text-orange-600",
+    bgColor: "bg-orange-100",
+  },
+  senior: {
+    name: "Senior",
+    emoji: "⭐",
+    color: "text-yellow-600",
+    bgColor: "bg-yellow-100",
+  },
+  senior_avanzado: {
+    name: "Senior Avanzado",
+    emoji: "👑",
+    color: "text-red-600",
+    bgColor: "bg-red-100",
+  },
+};
+
+export const steps = [
+  {
+    id: 0,
+    title: "¿Qué tecnologías dominas?",
+    subtitle: "Selecciona las tecnologías que dominas 💻",
+    shortTitle: "Stack Tecnológico",
+    icon: Code2,
+    color: "bg-axity-gradient-primary",
+    theme: "from-blue-50 to-purple-50",
+  },
+  {
+    id: 1,
+    title: "¡Es hora de documentar tu trayectoria!",
+    subtitle:
+      "Cada experiencia profesional es una pieza clave de tu historia de crecimiento. Comienza agregando tu experiencia laboral más significativa 📂",
+    shortTitle: "Experiencia",
+    icon: Briefcase,
+    color: "bg-axity-gradient-accent",
+    theme: "from-orange-50 to-red-50",
+  },
+  {
+    id: 2,
+    title: "Formación y certificaciones",
+    subtitle: "Tu background académico y credenciales técnicas 📚",
+    shortTitle: "Educación",
+    icon: GraduationCap,
+    color: "bg-axity-gradient-cool",
+    theme: "from-emerald-50 to-teal-50",
+  },
+  {
+    id: 3,
+    title: "¡Perfil completado!",
+    subtitle: "Revisa tu información antes de enviar 🚀",
+    shortTitle: "Finalizar",
+    icon: CheckCircle2,
+    color: "bg-axity-gradient-secondary",
+    theme: "from-purple-50 to-pink-50",
+  },
+];

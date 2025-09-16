@@ -159,6 +159,14 @@
     box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
     backdrop-filter: none;
   }
+
+  /* Panel lateral (Dialog/Sheet) opaco */
+  .ax-dialog {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,.25);
+    backdrop-filter: none;
+  }
 }
 
 /* =========================

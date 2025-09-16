@@ -1,344 +1,306 @@
-import { useState } from "react";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "./ui/dropdown-menu";
-import { 
-  Zap, 
-  Trophy, 
-  Star,
-  Settings,
-  User,
-  LogOut,
-  ChevronDown,
-  Target,
-  TrendingUp,
-  Award,
-  BadgeIcon
-} from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
-import axityLogo from 'figma:asset/57af6e8947c8fbfc785c96ea7f281591f169a017.png';
+import { motion } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
+import { CheckCircle2, TrendingUp, LogOut, User } from "lucide-react";
+import axityLogo from "@/assets/logo_axity.svg";
+import type { ComponentType, ReactElement } from "react";
 
-interface AxityHeaderProps {
-  user: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    employeeId: string;
-  };
-  xp: number;
-  achievements: string[];
-  currentStep: number;
-  totalSteps: number;
+type StepIcon = ComponentType<{ className?: string }>;
+
+export interface HeaderStep {
+  id: string;
+  icon: StepIcon;
+  shortTitle: string;
 }
 
-export function AxityHeader({ user, xp, achievements, currentStep, totalSteps }: AxityHeaderProps) {
-  const [showNotifications, setShowNotifications] = useState(true);
-  
-  const level = Math.floor(xp / 200) + 1;
-  const nextLevelXP = level * 200;
-  const currentLevelXP = (level - 1) * 200;
-  const progressToNextLevel = ((xp - currentLevelXP) / (nextLevelXP - currentLevelXP)) * 100;
-  
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+type AutoSaveStatus = "idle" | "saving" | "saved" | "error";
+
+interface AxityHeaderProps {
+  steps: HeaderStep[];
+  currentStep: number;
+  navigateToStep: (index: number) => void;
+  getStepCompletion: (index: number) => boolean;
+  progressPercent: number;
+
+  user: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
   };
 
-  const getLevelTitle = (level: number) => {
-    if (level >= 5) return "Senior Consultant";
-    if (level >= 4) return "Expert Developer";
-    if (level >= 3) return "Advanced Developer";
-    if (level >= 2) return "Junior Developer";
-    return "Trainee Developer";
+  levelInfo: {
+    name: string;
+    emoji: string;
   };
 
-  const progressPercentage = ((currentStep + 1) / totalSteps) * 100;
+  /** Datos del autosave (opcional). Nota: lastSaved puede venir como timestamp (number) y aquí lo convertimos a Date */
+  autoSave?: {
+    status: AutoSaveStatus | string;     // puede venir más laxo desde el hook
+    lastSaved?: Date | number | null;    // a veces timestamp
+    error?: string | null;               // a veces null
+    onForceSave?: () => void;
+  };
 
+  onLogout: () => void;
+  logoSrc?: string;
+}
+
+export function AxityHeader({
+  steps,
+  currentStep,
+  navigateToStep,
+  getStepCompletion,
+  progressPercent,
+  user,
+  levelInfo,
+  autoSave,
+  onLogout,
+  logoSrc,
+}: AxityHeaderProps): ReactElement {
+  // --- Normalizaciones para cumplir con AutoSaveIndicator ---
+  const normalizedStatus: AutoSaveStatus = (() => {
+    const raw = autoSave?.status;
+    if (raw === "idle" || raw === "saving" || raw === "saved" || raw === "error") {
+      return raw;
+    }
+    return "idle";
+  })();
+
+  const normalizedLastSaved: Date | undefined = (() => {
+    const raw = autoSave?.lastSaved;
+    if (raw instanceof Date) return raw;
+    if (typeof raw === "number") return new Date(raw);
+    return undefined; // null/undefined -> undefined
+  })();
+
+  const normalizedError: string | undefined =
+    autoSave?.error ?? undefined; // null -> undefined
+
+  console.log('first', user)
   return (
-    <motion.header 
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className="relative z-10 bg-white/95 backdrop-blur-2xl border-b border-white/20 shadow-lg"
-    >
-      {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-50/50 via-white/80 to-blue-50/50 backdrop-blur-2xl" />
-      
-      <div className="relative container mx-auto px-6">
-        <div className="flex items-center justify-between">
-          {/* Logo y Branding */}
-          <motion.div 
-            className="flex items-center gap-6"
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          >
+    <div className="fixed top-0 left-0 right-0 z-50">
+      {/* Header principal */}
+      <motion.div
+        className="bg-white/10 backdrop-blur-2xl rounded-2xl border border-white/20 shadow-2xl"
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            {/* Branding */}
             <div className="flex items-center gap-4">
-              <motion.div
-                whileHover={{ rotate: 5 }}
-                transition={{ type: "spring", stiffness: 300 }}
-                className="relative"
-              >
-                <img 
-                  src={axityLogo} 
-                  alt="Axity" 
-                  className="h-12 w-auto"
-                />
+              <motion.div whileHover={{ scale: 1.05, rotate: 5 }} className="relative group">
+                <img src={logoSrc ?? axityLogo} alt="Axity" className="h-8 w-auto" />
                 <motion.div
-                  className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute -inset-2 bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] rounded-lg opacity-0 group-hover:opacity-20 blur-sm"
+                  whileHover={{ opacity: 0.3 }}
                 />
               </motion.div>
-              
-              <div className="hidden md:block">
-                <h1 className="text-xl font-bold text-[var(--axity-purple)] mb-1">
-                  Professional Profile
-                </h1>
-                <p className="text-sm text-[var(--axity-gray)] flex items-center gap-2">
-                  <Target className="h-3 w-3" />
-                  Actualización de Perfil Profesional
-                </p>
-              </div>
             </div>
-            
-            {/* Progress Mini Indicator */}
-            <div className="hidden lg:flex items-center gap-3 px-4 py-2 bg-white/60 rounded-2xl border border-purple-100">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full" />
-                <span className="text-sm font-medium text-[var(--axity-purple)]">
-                  Paso {currentStep + 1} de {totalSteps}
-                </span>
-              </div>
-              <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progressPercentage}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                />
-              </div>
-            </div>
-          </motion.div>
 
-          {/* User Info y Gamification */}
-          <div className="flex items-center gap-4">
-            {/* XP y Level Card */}
-            <motion.div 
-              className="hidden md:flex items-center gap-4 bg-white/80 backdrop-blur-xl rounded-2xl px-6 py-3 border border-white/40 shadow-lg"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-12 h-12 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-xl flex items-center justify-center shadow-lg">
-                    <Zap className="h-6 w-6 text-white" />
-                  </div>
-                  <motion.div
-                    className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center"
-                    animate={{ scale: [1, 1.3, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
+            {/* Stepper Desktop */}
+            <div className="hidden md:flex items-center gap-2 bg-white/20 rounded-xl p-2">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = index === currentStep;
+                const isCompleted = getStepCompletion(index);
+                const isClickable = index <= currentStep || (index > 0 && getStepCompletion(index - 1));
+
+                return (
+                  <motion.button
+                    key={`nav-${step.id}`}
+                    onClick={() => isClickable && navigateToStep(index)}
+                    disabled={!isClickable}
+                    className={`relative flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
+                      isActive
+                        ? "bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] text-white shadow-lg"
+                        : isCompleted
+                        ? "bg-[var(--axity-mint)]/20 text-[var(--axity-mint)] hover:bg-[var(--axity-mint)]/30"
+                        : isClickable
+                        ? "text-gray-600 hover:text-[var(--axity-purple)] hover:bg-white/40"
+                        : "text-gray-300 cursor-not-allowed"
+                    }`}
+                    whileHover={isClickable ? { scale: 1.02 } : {}}
+                    whileTap={isClickable ? { scale: 0.98 } : {}}
                   >
-                    <Star className="h-2 w-2 text-yellow-700" />
-                  </motion.div>
-                </div>
-                
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-lg text-gray-900">{xp} XP</span>
-                    <BadgeIcon className="bg-yellow-100 text-yellow-800 border-yellow-200 text-xs">
-                      Nivel {level}
-                    </BadgeIcon>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600">{getLevelTitle(level)}</span>
-                    <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="relative">
+                      {isCompleted && !isActive ? (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: "spring", bounce: 0.6 }}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </motion.div>
+                      ) : (
+                        <Icon className="h-4 w-4" />
+                      )}
+
+                      {isActive && (
+                        <motion.div
+                          className="absolute inset-0 bg-white/30 rounded-full"
+                          animate={{ scale: [1, 1.5, 1], opacity: [0.8, 0, 0.8] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      )}
+                    </div>
+
+                    <span className="font-medium">{step.shortTitle}</span>
+
+                    {isActive && (
                       <motion.div
-                        className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full"
+                        className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 1, repeat: Infinity }}
+                      />
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Indicadores + Usuario */}
+            <div className="flex items-center gap-3">
+              {/* AutoSaveIndicator (opcional) */}
+              {autoSave && (
+                <div className="hidden lg:flex items-center gap-3 bg-white/20 rounded-xl px-3 py-2">
+                  <AutoSaveIndicator
+                    status={normalizedStatus}
+                    lastSaved={normalizedLastSaved}
+                    error={normalizedError}
+                    onForceSave={autoSave.onForceSave}
+                  />
+
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-bold text-[var(--axity-purple)]">{Math.round(progressPercent)}%</span>
+                    <div className="w-12 h-1.5 bg-gray-300 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-mint)]"
                         initial={{ width: 0 }}
-                        animate={{ width: `${progressToNextLevel}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
+                        animate={{ width: `${progressPercent}%` }}
+                        transition={{ duration: 0.5 }}
                       />
                     </div>
                   </div>
-                </div>
-              </div>
-            </motion.div>
 
-            {/* Achievements */}
-            <motion.div 
-              className="relative"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400 }}
-            >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative bg-white/80 backdrop-blur-xl border border-white/40 shadow-lg hover:bg-white/90 rounded-2xl px-4 py-3"
-                onClick={() => setShowNotifications(!showNotifications)}
-              >
-                <div className="flex items-center gap-2">
-                  <Trophy className="h-5 w-5 text-yellow-600" />
-                  <span className="font-medium text-gray-900">{achievements.length}</span>
-                  {achievements.length > 0 && (
+                  {getStepCompletion(currentStep) ? (
                     <motion.div
-                      className="w-2 h-2 bg-red-400 rounded-full"
-                      animate={{ scale: [1, 1.5, 1] }}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    />
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="flex items-center gap-1 text-xs text-[var(--axity-mint)] bg-[var(--axity-mint)]/20 px-2 py-1 rounded-full"
+                    >
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Listo</span>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="flex items-center gap-1 text-xs text-[var(--axity-violet)] bg-[var(--axity-violet)]/20 px-2 py-1 rounded-full"
+                    >
+                      <div className="w-1.5 h-1.5 bg-[var(--axity-violet)] rounded-full" />
+                      <span>Activo</span>
+                    </motion.div>
                   )}
                 </div>
-              </Button>
+              )}
 
-              <AnimatePresence>
-                {showNotifications && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute top-full right-0 mt-2 w-80 bg-white/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/40 overflow-hidden z-50"
-                  >
-                    <div className="p-4 border-b border-gray-100">
-                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                        <Award className="h-4 w-4 text-yellow-600" />
-                        Logros Recientes
-                      </h3>
+              {/* Usuario */}
+              <motion.div whileHover={{ scale: 1.05 }} className="relative bg-white/20 rounded-xl p-2">
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <div className="w-8 h-8 bg-gradient-to-br from-[var(--axity-purple)] to-[var(--axity-violet)] rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-white" />
                     </div>
-                    <div className="max-h-60 overflow-y-auto">
-                      {achievements.length > 0 ? (
-                        achievements.slice(-5).reverse().map((achievement, index) => (
-                          <motion.div
-                            key={index}
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="p-3 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-b-0"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                                <Trophy className="h-4 w-4 text-yellow-600" />
-                              </div>
-                              <div>
-                                <p className="font-medium text-sm text-gray-900">{achievement}</p>
-                                <p className="text-xs text-gray-500">Hace unos momentos</p>
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))
-                      ) : (
-                        <div className="p-6 text-center text-gray-500">
-                          <Trophy className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No hay logros aún</p>
-                        </div>
-                      )}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[var(--axity-mint)] rounded-full border-2 border-white text-xs flex items-center justify-center">
+                      <span className="text-white text-xs">{levelInfo.emoji}</span>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
+                  </div>
+                  <div className="hidden sm:block">
+                    <div className="font-medium text-gray-700 text-sm">
+                      {user.firstName || user.email}
+                      {user.lastName ? ` ${user.lastName}` : ""}
+                    </div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                      <span>{levelInfo.name}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
 
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <motion.button
-                  className="flex items-center gap-3 bg-white/80 backdrop-blur-xl border border-white/40 shadow-lg hover:bg-white/90 rounded-2xl px-4 py-3 transition-all"
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
+              {/* Logout */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 hover:bg-white/80 hover:cursor-pointer"
+                  title="Cerrar sesión"
+                  onClick={onLogout}
                 >
-                  <Avatar className="h-8 w-8 border-2 border-white shadow-md">
-                    <AvatarFallback className="bg-gradient-to-r from-purple-400 to-pink-400 text-white font-semibold text-sm">
-                      {getInitials(user.firstName, user.lastName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="hidden md:block text-left">
-                    <p className="font-semibold text-sm text-gray-900 leading-tight">
-                      {user.firstName} {user.lastName}
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      {user.employeeId}
-                    </p>
-                  </div>
-                  
-                  <ChevronDown className="h-4 w-4 text-gray-600" />
-                </motion.button>
-              </DropdownMenuTrigger>
-              
-              <DropdownMenuContent
-                align="end" 
-                className="w-64 bg-white/95 backdrop-blur-2xl border border-white/40 shadow-2xl rounded-2xl"
-              >
-                <div className="p-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border-2 border-purple-200 shadow-lg">
-                      <AvatarFallback className="bg-gradient-to-r from-purple-400 to-pink-400 text-white font-bold">
-                        {getInitials(user.firstName, user.lastName)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-gray-900">
-                        {user.firstName} {user.lastName}
-                      </p>
-                      <p className="text-sm text-gray-600">{user.email}</p>
-                      <Badge className="mt-1 bg-purple-100 text-purple-800 border-purple-200">
-                        {user.employeeId}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-2">
-                  <DropdownMenuItem className="rounded-xl p-3 hover:bg-gray-50 transition-colors">
-                    <User className="h-4 w-4 mr-3 text-gray-600" />
-                    <span>Mi Perfil</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem className="rounded-xl p-3 hover:bg-gray-50 transition-colors">
-                    <TrendingUp className="h-4 w-4 mr-3 text-gray-600" />
-                    <span>Progreso</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuItem className="rounded-xl p-3 hover:bg-gray-50 transition-colors">
-                    <Settings className="h-4 w-4 mr-3 text-gray-600" />
-                    <span>Configuración</span>
-                  </DropdownMenuItem>
-                  
-                  <DropdownMenuSeparator className="my-2" />
-                  
-                  <DropdownMenuItem className="rounded-xl p-3 hover:bg-red-50 text-red-600 transition-colors">
-                    <LogOut className="h-4 w-4 mr-3" />
-                    <span>Cerrar Sesión</span>
-                  </DropdownMenuItem>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
+      </motion.div>
 
-        {/* Mobile Progress Bar */}
-        <div className="md:hidden mt-4 flex items-center gap-3">
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-[var(--axity-purple)]">
-                Paso {currentStep + 1} de {totalSteps}
-              </span>
-              <span className="text-sm text-gray-600">{Math.round(progressPercentage)}%</span>
-            </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercentage}%` }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-              />
+      {/* Navegación móvil */}
+      <div className="md:hidden mx-4 mt-2">
+        <motion.div
+          className="bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 shadow-lg"
+          initial={{ y: -50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+        >
+          <div className="p-3">
+            <div className="flex items-center justify-between">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = index === currentStep;
+                const isCompleted = getStepCompletion(index);
+                const isClickable = index <= currentStep || (index > 0 && getStepCompletion(index - 1));
+
+                return (
+                  <motion.button
+                    key={`mobile-nav-${step.id}`}
+                    onClick={() => isClickable && navigateToStep(index)}
+                    disabled={!isClickable}
+                    className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-b from-[var(--axity-purple)] to-[var(--axity-violet)] text-white"
+                        : isCompleted
+                        ? "text-[var(--axity-mint)]"
+                        : isClickable
+                        ? "text-gray-500 hover:text-[var(--axity-purple)]"
+                        : "text-gray-300"
+                    }`}
+                    whileHover={isClickable ? { scale: 1.05 } : {}}
+                  >
+                    {isCompleted && !isActive ? (
+                      <CheckCircle2 className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
+                    <span className="text-xs font-medium">{index + 1}</span>
+                  </motion.button>
+                );
+              })}
             </div>
           </div>
-          
-          <div className="flex items-center gap-2 bg-white/60 rounded-xl px-3 py-2">
-            <Zap className="h-4 w-4 text-yellow-600" />
-            <span className="font-bold text-sm">{xp} XP</span>
-          </div>
-        </div>
+        </motion.div>
       </div>
-    </motion.header>
+
+      {/* Línea de progreso global */}
+      <div className="mx-4 mt-2 h-0.5 bg-white/10 rounded-full overflow-hidden">
+        <motion.div
+          className="h-full bg-gradient-to-r from-[var(--axity-purple)] via-[var(--axity-violet)] to-[var(--axity-mint)]"
+          initial={{ width: 0 }}
+          animate={{ width: `${progressPercent}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+        />
+      </div>
+    </div>
   );
 }

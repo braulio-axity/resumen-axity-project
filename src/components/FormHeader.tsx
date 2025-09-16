@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { CONSULTANT_LEVELS, FORM_STEPS } from "../constants";
 import type { FormData } from "../types/app";
-import axityLogo from 'figma:asset/57af6e8947c8fbfc785c96ea7f281591f169a017.png';
+import axityLogo from "@/assets/logo_axity.svg";
 
 interface FormHeaderProps {
   formData: FormData;

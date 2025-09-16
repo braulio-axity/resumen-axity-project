@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -26,20 +26,25 @@ import {
   Settings,
   Hash,
 } from "lucide-react";
+import TechnologiesAdmin from "@/components/admin/TechnologiesAdmin";
 
-// ⬅️ Importa los tipos desde tu archivo central de tipos
 import type {
   FormData,
   UpdateFormData,
   AddMotivationalMessage,
   StreakCounter,
 } from "./../../types/app";
+import { useAuth } from "@/context/AuthContext";
+import { getTechnologiesMap } from "@/api/technologies";
+
+// ===== Tipos para la respuesta shape=map =====
+type TechnologyMap = Record<string, { category: string; color: string }>;
 
 interface SkillsStepProps {
   formData: FormData;
   updateFormData: UpdateFormData;
   addProgress: (points: number, milestone?: string) => void;
-  addMotivationalMessage: AddMotivationalMessage; // <- usa la unión estricta del tipo
+  addMotivationalMessage: AddMotivationalMessage;
   streakCounter: StreakCounter;
   setStreakCounter: React.Dispatch<React.SetStateAction<StreakCounter>>;
 }
@@ -61,6 +66,55 @@ export function SkillsStep({
   const [selectedTechnology, setSelectedTechnology] = useState("");
   const [tempSkillLevel, setTempSkillLevel] = useState("");
   const [tempSkillVersion, setTempSkillVersion] = useState("");
+
+  const { isAuthenticated, user } = useAuth();
+
+  // ====== Carga de tecnologías desde API (shape=map) ======
+  const [techMap, setTechMap] = useState<TechnologyMap>({});
+  const [loadingTechs, setLoadingTechs] = useState(false);
+  const [techsError, setTechsError] = useState<string | null>(null);
+  const lastHashRef = useRef<string>("");
+
+  // Hash estable para comparar si la respuesta cambió
+  const hashTechnologyMap = (map: TechnologyMap) => {
+    const keys = Object.keys(map).sort();
+    const normalized: any = {};
+    for (const k of keys) {
+      // Ordena internamente para estabilidad (por si cambia el orden de props)
+      normalized[k] = { category: map[k].category, color: map[k].color ?? "" };
+    }
+    return JSON.stringify(normalized);
+  };
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setLoadingTechs(true);
+      try {
+        const res = await getTechnologiesMap(); // cache ETag
+        if (!alive) return;
+        setTechMap(res.data);
+
+        const next = res?.data ?? {};
+        const nextHash = hashTechnologyMap(next);
+
+        if (alive && nextHash !== lastHashRef.current) {
+          setTechMap(next);
+          lastHashRef.current = nextHash;
+        }
+      } catch (e: any) {
+        if (alive) setTechsError(e?.message || "Error cargando tecnologías");
+      } finally {
+        if (alive) setLoadingTechs(false);
+      }
+    })();
+
+    return () => {
+      alive = false;
+    };
+    // Solo en montaje: se llama una vez
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const skillLevels = [
     { id: "bajo",  name: "Básico",     emoji: "🌱", description: "Conceptos fundamentales claros", professional: "Básico",     color: "from-green-400 to-emerald-500", bgColor: "bg-green-50",  textColor: "text-green-700" },
@@ -86,127 +140,28 @@ export function SkillsStep({
     "¡Construcción de perfil épica! 🎪",
   ];
 
-  // Sistema de categorización de tecnologías con badges
-  const technologiesWithCategories = {
-    // Frontend/UI
-    React: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    Angular: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    "Vue.js": { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    "Next.js": { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    "Nuxt.js": { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    Svelte: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    TypeScript: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    JavaScript: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    jQuery: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    Bootstrap: { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
-    "Tailwind CSS": { category: "Frontend/UI", color: "bg-blue-100 text-blue-800" },
+  // ====== Datos derivados (memoizados) desde techMap ======
+  const popularSkills = useMemo(() => Object.keys(techMap), [techMap]);
 
-    // Mobile
-    "React Native": { category: "Mobile", color: "bg-purple-100 text-purple-800" },
-    Flutter: { category: "Mobile", color: "bg-purple-100 text-purple-800" },
-    Ionic: { category: "Mobile", color: "bg-purple-100 text-purple-800" },
-    Swift: { category: "Mobile", color: "bg-purple-100 text-purple-800" },
-    Kotlin: { category: "Mobile", color: "bg-purple-100 text-purple-800" },
+  const getSkillCategory = useMemo(
+    () => (skillName: string) => {
+      const rec = techMap[skillName];
+      if (!rec) return null;
+      return {
+        category: rec.category,
+        color: rec.color || "bg-gray-100 text-gray-800",
+      };
+    },
+    [techMap]
+  );
 
-    // Backend
-    "Node.js": { category: "Backend", color: "bg-green-100 text-green-800" },
-    "Express.js": { category: "Backend", color: "bg-green-100 text-green-800" },
-    "Nest.js": { category: "Backend", color: "bg-green-100 text-green-800" },
-    Python: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Django: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Flask: { category: "Backend", color: "bg-green-100 text-green-800" },
-    FastAPI: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Java: { category: "Backend", color: "bg-green-100 text-green-800" },
-    "Spring Boot": { category: "Backend", color: "bg-green-100 text-green-800" },
-    "Spring Framework": { category: "Backend", color: "bg-green-100 text-green-800" },
-    ".NET Core": { category: "Backend", color: "bg-green-100 text-green-800" },
-    "ASP.NET": { category: "Backend", color: "bg-green-100 text-green-800" },
-    PHP: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Laravel: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Go: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Rust: { category: "Backend", color: "bg-green-100 text-green-800" },
-    Ruby: { category: "Backend", color: "bg-green-100 text-green-800" },
-    "Ruby on Rails": { category: "Backend", color: "bg-green-100 text-green-800" },
-    Scala: { category: "Backend", color: "bg-green-100 text-green-800" },
-
-    // Base de Datos
-    PostgreSQL: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    MySQL: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    MongoDB: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    Redis: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    Cassandra: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    DynamoDB: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    Oracle: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    "SQL Server": { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    MariaDB: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    Neo4j: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    InfluxDB: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    Firebase: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-    Supabase: { category: "Base de Datos", color: "bg-orange-100 text-orange-800" },
-
-    // Cloud/DevOps
-    AWS: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Azure: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    "Google Cloud": { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    "IBM Cloud": { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    "Oracle Cloud": { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    DigitalOcean: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Heroku: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Vercel: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Netlify: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Cloudflare: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    "Firebase Hosting": { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Docker: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Kubernetes: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Jenkins: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    "GitLab CI": { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    "GitHub Actions": { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    CircleCI: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Terraform: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Ansible: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Chef: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Puppet: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Helm: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    ArgoCD: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Vagrant: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-    Rancher: { category: "Cloud/DevOps", color: "bg-indigo-100 text-indigo-800" },
-
-    // APIs/Integraciones
-    "REST API": { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    GraphQL: { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    gRPC: { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    WebSockets: { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    "Socket.io": { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    SOAP: { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    OpenAPI: { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-    Swagger: { category: "APIs/Integraciones", color: "bg-cyan-100 text-cyan-800" },
-
-    // Testing/QA
-    Jest: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Cypress: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Selenium: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Postman: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    JUnit: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    pytest: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Mocha: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Chai: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Playwright: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    TestNG: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    PHPUnit: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    RSpec: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-    Jasmine: { category: "Testing/QA", color: "bg-yellow-100 text-yellow-800" },
-  };
-
-  const popularSkills = Object.keys(technologiesWithCategories);
-
-  const isSkillInPopularList = (skillName: string) => {
-    const normalizedInput = skillName.trim().toLowerCase();
-    return popularSkills.some((skill) => skill.toLowerCase() === normalizedInput);
-  };
-
-  const getSkillCategory = (skillName: string) => {
-    return (technologiesWithCategories as Record<string, { category: string; color: string }>)[skillName] || null;
-  };
+  const isSkillInPopularList = useMemo(
+    () => (skillName: string) => {
+      const normalizedInput = skillName.trim().toLowerCase();
+      return popularSkills.some((s) => s.toLowerCase() === normalizedInput);
+    },
+    [popularSkills]
+  );
 
   const isSkillAlreadyInStack = (skillName: string) => {
     const skills = formData.skills || [];
@@ -214,14 +169,17 @@ export function SkillsStep({
     return skills.some((s) => s.name.toLowerCase() === normalizedInput);
   };
 
-  const filteredSkills = popularSkills.filter((skill) => {
-    if (!searchTerm.trim()) return true;
+  const filteredSkills = useMemo(() => {
+    if (!searchTerm.trim()) return popularSkills;
     const normalizedSearch = searchTerm.trim().toLowerCase();
-    const skillInfo = getSkillCategory(skill);
-    const matchesName = skill.toLowerCase().includes(normalizedSearch);
-    const matchesCategory = skillInfo?.category.toLowerCase().includes(normalizedSearch);
-    return matchesName || matchesCategory;
-  });
+
+    return popularSkills.filter((skill) => {
+      const info = getSkillCategory(skill);
+      const matchesName = skill.toLowerCase().includes(normalizedSearch);
+      const matchesCategory = info?.category.toLowerCase().includes(normalizedSearch);
+      return matchesName || matchesCategory;
+    });
+  }, [popularSkills, searchTerm, getSkillCategory]);
 
   const showContextualSuccess = (message: string) => {
     setContextualMessage(message);
@@ -273,6 +231,50 @@ export function SkillsStep({
     }
   };
 
+  const requestNewSkill = async () => {
+    if (!newSkill.trim() || !skillLevel) return;
+  
+    // Evita duplicados en el stack del usuario
+    if (isSkillAlreadyInStack(newSkill)) {
+      showContextualSuccess(`❌ ${newSkill} ya está en tu stack tecnológico`);
+      return;
+    }
+  
+    setIsRequestingSkill(true);
+    try {
+      // Simulación de envío (si luego tienes un endpoint real, reemplázalo aquí)
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+  
+      const versionText = skillVersion.trim() ? ` ${skillVersion.trim()}` : "";
+      const levelName =
+        skillLevels.find((l) => l.id === skillLevel)?.name ?? "N/D";
+  
+      addMotivationalMessage(
+        "skill",
+        "¡Solicitud enviada! 📧",
+        `Hemos notificado al admin sobre "${newSkill}${versionText}" (nivel: ${levelName}). Te avisaremos cuando esté disponible.`,
+        "✨",
+        "Tecnología solicitada para agregar a las tecnologías populares de Axity"
+      );
+  
+      addProgress(2, "¡Contribuyendo a las tecnologías populares de Axity! 🔧");
+  
+      // Limpia el formulario
+      setNewSkill("");
+      setSkillLevel("");
+      setSkillVersion("");
+    } catch {
+      addMotivationalMessage(
+        "skill",
+        "Error al enviar solicitud",
+        "Intenta de nuevo en unos momentos.",
+        "⚠️"
+      );
+    } finally {
+      setIsRequestingSkill(false);
+    }
+  }
+  
   const handlePopularSkillClick = (skillName: string) => {
     const skills = formData.skills || [];
     if (!skills.some((s) => s.name === skillName)) {
@@ -348,35 +350,6 @@ export function SkillsStep({
     addMotivationalMessage("skill", randomMessage, `${removedSkill.name} removido del stack`, "🗑️");
   };
 
-  const requestNewSkill = async () => {
-    if (!newSkill.trim() || !skillLevel) return;
-    if (isSkillAlreadyInStack(newSkill)) {
-      showContextualSuccess(`❌ ${newSkill} ya está en tu stack tecnológico`);
-      return;
-    }
-
-    setIsRequestingSkill(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const versionText = skillVersion.trim() ? ` ${skillVersion.trim()}` : "";
-      addMotivationalMessage(
-        "skill",
-        "¡Solicitud enviada! 📧",
-        `Hemos notificado al admin sobre "${newSkill}${versionText}" (nivel: ${skillLevels.find((l) => l.id === skillLevel)?.name}). Te avisaremos cuando esté disponible.`,
-        "✨",
-        "Tecnología solicitada para agregar a las tecnologías populares de Axity"
-      );
-      addProgress(2, "¡Contribuyendo a las tecnologías populares de Axity! 🔧");
-      setNewSkill("");
-      setSkillLevel("");
-      setSkillVersion("");
-    } catch {
-      addMotivationalMessage("skill", "Error al enviar solicitud", "Intenta de nuevo en unos momentos.", "⚠️");
-    } finally {
-      setIsRequestingSkill(false);
-    }
-  };
-
   const hasSkillName = newSkill.trim().length > 0;
   const hasSkillLevel = skillLevel.length > 0;
   const skillExists = hasSkillName && isSkillInPopularList(newSkill);
@@ -385,7 +358,7 @@ export function SkillsStep({
 
   return (
     <div className="space-y-8">
-      {/* Contextual Success Message */}
+      {/* Mensaje contextual */}
       <AnimatePresence>
         {contextualMessage && (
           <motion.div
@@ -408,7 +381,18 @@ export function SkillsStep({
         )}
       </AnimatePresence>
 
-      {/* Current Skills Display - Moved to top for better visibility */}
+      {/* Módulo admin */}
+      {isAuthenticated && user?.role === "ADMIN" && <TechnologiesAdmin />}
+
+      {/* Estados de carga/errores para catálogo de tecnologías */}
+      {loadingTechs && (
+        <div className="text-sm text-gray-500">Cargando tecnologías…</div>
+      )}
+      {!!techsError && (
+        <div className="text-sm text-red-600">Error: {techsError}</div>
+      )}
+
+      {/* Stack del usuario */}
       {formData.skills && formData.skills.length > 0 && (
         <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
           <CardContent className="p-6">
@@ -481,7 +465,7 @@ export function SkillsStep({
         </Card>
       )}
 
-      {/* Popular Skills */}
+      {/* Tecnologías populares */}
       <div>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
@@ -516,7 +500,7 @@ export function SkillsStep({
           </div>
         </div>
 
-        {/* Search Results Info */}
+        {/* Search Info */}
         {searchTerm && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -535,7 +519,7 @@ export function SkillsStep({
           </motion.div>
         )}
 
-        {/* Skills Grid */}
+        {/* Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {filteredSkills.map((skill, index) => {
             const skillInfo = getSkillCategory(skill);
@@ -606,7 +590,7 @@ export function SkillsStep({
         </div>
       </div>
 
-      {/* Manual Skill Entry */}
+      {/* Entrada manual */}
       <div className="mt-12">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-gradient-to-br from-[var(--axity-violet)] to-purple-500 rounded-lg">
@@ -677,9 +661,9 @@ export function SkillsStep({
                 </div>
               </div>
 
-              {/* Dynamic Action Buttons - Tres validaciones independientes */}
+              {/* Acciones dinámicas */}
               <div className="space-y-4">
-                {/* Validación 1: Tecnología ya existe en el stack del usuario */}
+                {/* 1. Ya existe en el stack */}
                 <AnimatePresence>
                   {skillAlreadyExists && (
                     <motion.div
@@ -704,7 +688,7 @@ export function SkillsStep({
                   )}
                 </AnimatePresence>
 
-                {/* Validación 2: Tecnología popular disponible pero NO en stack */}
+                {/* 2. Popular disponible pero NO en stack */}
                 <AnimatePresence>
                   {skillExists && !skillAlreadyExists && (
                     <motion.div
@@ -714,7 +698,6 @@ export function SkillsStep({
                       exit={{ opacity: 0, height: 0 }}
                     >
                       <div className="space-y-3">
-                        {/* Info: También disponible en botones populares */}
                         <motion.div
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -733,7 +716,6 @@ export function SkillsStep({
                           </div>
                         </motion.div>
                         
-                        {/* Botón principal para agregar - Solo si tiene nivel */}
                         {hasSkillLevel && (
                           <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
@@ -753,7 +735,7 @@ export function SkillsStep({
                   )}
                 </AnimatePresence>
 
-                {/* Validación 3: Tecnología nueva (no en catálogo) */}
+                {/* 3. Tecnología nueva (no en catálogo) */}
                 <AnimatePresence>
                   {skillIsNew && !skillAlreadyExists && (
                     <motion.div
@@ -775,7 +757,6 @@ export function SkillsStep({
                             )}
                           </p>
                           
-                          {/* Botón solicitar - Solo si tiene nivel */}
                           {hasSkillLevel && (
                             <motion.div
                               initial={{ opacity: 0, scale: 0.9 }}
@@ -820,7 +801,7 @@ export function SkillsStep({
         </Card>
       </div>
 
-      {/* Side Panel for Technology Configuration */}
+      {/* Panel lateral */}
       <Sheet open={showSlidePanel} onOpenChange={setShowSlidePanel}>
         <SheetContent side="right" className="w-[calc(100vw-1.5rem)] max-w-none sm:w-[800px] lg:w-[950px] xl:w-[1100px] 2xl:w-[1200px] overflow-y-auto sm:mr-0 mr-3">
           <SheetHeader className="space-y-4 pb-6 px-4 lg:px-6">
@@ -854,7 +835,7 @@ export function SkillsStep({
               </div>
             </div>
 
-            {/* Step Indicators - Simple for technology configuration */}
+            {/* Step Indicators */}
             <div className="flex items-center justify-center px-4">
               <div className="relative flex items-center gap-6 sm:gap-8">
                 <div className="flex flex-col items-center gap-2">
@@ -911,8 +892,8 @@ export function SkillsStep({
                     <div className="flex-1">
                       <h3 className="font-medium text-[var(--axity-purple)]">{selectedTechnology}</h3>
                       {getSkillCategory(selectedTechnology) && (
-                        <Badge className={`text-xs ${getSkillCategory(selectedTechnology).color} border-0 mt-1`}>
-                          {getSkillCategory(selectedTechnology).category}
+                        <Badge className={`text-xs ${getSkillCategory(selectedTechnology)!.color} border-0 mt-1`}>
+                          {getSkillCategory(selectedTechnology)!.category}
                         </Badge>
                       )}
                     </div>
