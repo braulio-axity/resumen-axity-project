@@ -106,10 +106,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      mode: "cors",                  // explícito
+      mode: "cors",
       credentials: "omit",
       body: JSON.stringify({ email, password }),
     });
+    console.log('first login check', res)
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -118,6 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const data: { access_token: string; user?: User } = await res.json();
     const newToken = data.access_token;
+    console.log('second login check', newToken)
 
     if (!newToken || isJwtExpired(newToken)) {
       throw new Error("El token recibido es inválido o está expirado");

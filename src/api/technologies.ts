@@ -9,13 +9,8 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
-/** ------------ Auth: token provider configurable ------------ */
 let _tokenProvider: (() => string | null | undefined) | null = null;
 
-/**
- * Llama esto una vez (por ejemplo, desde tu AuthContext) para proveer el token actual.
- * Ej: configureApiAuth(() => auth.token)
- */
 export function configureApiAuth(getter: () => string | null | undefined) {
   _tokenProvider = getter;
 }
@@ -25,12 +20,13 @@ function getAccessToken(): string | null {
   return (_tokenProvider ? _tokenProvider() : localStorage.getItem("token")) ?? null;
 }
 
-/** SIEMPRE devolvemos objeto plano para evitar el union con Headers */
+
 function authHeaders(): Record<string, string> {
-  const token = getAccessToken();
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  const token = (_tokenProvider?.() ?? getAccessToken()) || null;
+  const headers: Record<string, string> = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return headers;
 }
-/** ----------------------------------------------------------- */
 
 function toQuery(params: Record<string, unknown>) {
   const qs = new URLSearchParams();
