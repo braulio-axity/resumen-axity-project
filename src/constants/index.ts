@@ -76,7 +76,7 @@ export const FORM_STEPS = [
       "El aprendizaje continuo es clave en tecnología. Comparte tu formación y certificaciones 📚",
     shortTitle: "Educación",
     icon: GraduationCap,
-    color: "bg-axity-gradient-cool",
+    color: "bg-axity-gradient-accent",
     theme: "from-emerald-50 to-teal-50",
   },
   {
@@ -327,8 +327,8 @@ export const steps = [
     subtitle: "Tu background académico y credenciales técnicas 📚",
     shortTitle: "Educación",
     icon: GraduationCap,
-    color: "bg-axity-gradient-cool",
-    theme: "from-emerald-50 to-teal-50",
+    color: "bg-axity-gradient-accent",
+    theme: "from-purple-50 to-pink-100",
   },
   {
     id: 3,

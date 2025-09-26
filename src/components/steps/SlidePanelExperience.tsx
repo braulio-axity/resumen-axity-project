@@ -1,20 +1,21 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Card, CardContent, CardHeader } from "../ui/card";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
-import { Checkbox } from "../ui/checkbox";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../ui/sheet";
-import { 
-  Plus, 
-  Building, 
-  User, 
-  Calendar, 
-  Target, 
-  Trophy, 
+import { useEffect, useState } from 'react';
+import { listCvExperiences, createCvExperience, updateCvExperience, deleteCvExperience, type CreateExperiencePayload } from '@/api/cvExperiences';
+import { motion, AnimatePresence } from "motion/react"
+import { Button } from "../ui/button"
+import { Badge } from "../ui/badge"
+import { Card, CardContent, CardHeader } from "../ui/card"
+import { Input } from "../ui/input"
+import { Label } from "../ui/label"
+import { Textarea } from "../ui/textarea"
+import { Checkbox } from "../ui/checkbox"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../ui/sheet"
+import {
+  Plus,
+  Building,
+  User,
+  Calendar,
+  Target,
+  Trophy,
   Code2,
   Trash2,
   Rocket,
@@ -29,20 +30,18 @@ import {
   Zap,
   Edit,
   FolderOpen
-} from "lucide-react";
-import { Separator } from "../ui/separator";
-
-// ⬅️ Tipos centralizados
+} from "lucide-react"
+import { Separator } from "../ui/separator"
 import type {
   FormData,
   UpdateFormData,
   AddMotivationalMessage,
   StreakCounter,
-} from "./../../types/app";
+} from "./../../types/app"
 
 // Reutiliza los tipos desde FormData para evitar duplicar estructuras
-type Experience = FormData["experiences"][number];
-type Project   = Experience["projects"][number];
+type Experience = FormData["experiences"][number]
+type Project = Experience["projects"][number]
 
 interface ExperienceStepProps {
   formData: FormData;
@@ -60,11 +59,11 @@ export function SlidePanelExperience({
   addMotivationalMessage,
   setStreakCounter
 }: ExperienceStepProps) {
-  const [showSlidePanel, setShowSlidePanel] = useState(false);
-  const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({});
-  const [activeStep, setActiveStep] = useState(0);
-  const [contextualMessage, setContextualMessage] = useState<string | null>(null);
-  
+  const [showSlidePanel, setShowSlidePanel] = useState(false)
+  const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({})
+  const [activeStep, setActiveStep] = useState(0)
+  const [contextualMessage, setContextualMessage] = useState<string | null>(null)
+
   const [currentExp, setCurrentExp] = useState<Experience>({
     company: "",
     position: "",
@@ -75,52 +74,68 @@ export function SlidePanelExperience({
     achievements: "",
     technologies: [],
     projects: []
-  });
+  })
 
   const [currentProject, setCurrentProject] = useState<Project>({
     name: "",
     role: "",
     responsibilities: "",
     technologies: []
-  });
+  })
 
-  const [showProjectForm, setShowProjectForm] = useState(false);
-  const [newTechName, setNewTechName] = useState("");
-  const [newTechVersion, setNewTechVersion] = useState("");
-  const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null);
+  const [showProjectForm, setShowProjectForm] = useState(false)
+  const [newTechName, setNewTechName] = useState("")
+  const [newTechVersion, setNewTechVersion] = useState("")
+  const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null)
+
+  const [loadingServerExp, setLoadingServerExp] = useState(false)
+  const [savingExp, setSavingExp] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingServerExp(true);
+        const server = await listCvExperiences();
+        updateFormData('experiences', server as any);
+      } finally {
+        setLoadingServerExp(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const experienceSteps = [
-    { 
-      id: 0, 
-      title: "Básico", 
-      icon: Building, 
+    {
+      id: 0,
+      title: "Básico",
+      icon: Building,
       description: "Empresa, cargo y fechas",
       color: "from-blue-400 to-purple-500"
     },
-    { 
-      id: 1, 
-      title: "Proyectos", 
-      icon: Code2, 
+    {
+      id: 1,
+      title: "Proyectos",
+      icon: Code2,
       description: "Obligatorio - Al menos uno",
       color: "from-green-400 to-blue-500"
     },
-    { 
-      id: 2, 
-      title: "Logros", 
-      icon: Trophy, 
+    {
+      id: 2,
+      title: "Logros",
+      icon: Trophy,
       description: "Impacto y desafíos",
       color: "from-yellow-400 to-orange-500"
     }
-  ];
+  ]
 
   const showContextualSuccess = (message: string) => {
     setContextualMessage(message);
     setTimeout(() => setContextualMessage(null), 3000);
-  };
+  }
 
   const toggleExpanded = (index: number) => {
     setExpandedCards(prev => ({ ...prev, [index]: !prev[index] }));
-  };
+  }
 
   const getDuration = (startDate: string, endDate: string, current: boolean) => {
     if (!startDate) return "";
@@ -132,12 +147,12 @@ export function SlidePanelExperience({
     const years = Math.floor(months / 12);
     if (years > 0) {
       const remainingMonths = months % 12;
-      return remainingMonths > 0 
+      return remainingMonths > 0
         ? `${years} año${years > 1 ? 's' : ''} y ${remainingMonths} mes${remainingMonths > 1 ? 'es' : ''}`
         : `${years} año${years > 1 ? 's' : ''}`;
     }
     return `${months} mes${months > 1 ? 'es' : ''}`;
-  };
+  }
 
   // Ordenar experiencias (reciente primero)
   const sortExperiencesByDate = (experiences: Experience[]) => {
@@ -146,60 +161,97 @@ export function SlidePanelExperience({
       if (!a.current && b.current) return 1;
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     });
-  };
+  }
 
-  const addExperience = () => {
-    if (!currentExp.company || !currentExp.position) return;
+  const addExperience = async () => {
+    if (!currentExp.company || !currentExp.position || !currentExp.startDate) return;
+
+    const normalize = (e: Experience): CreateExperiencePayload => ({
+      company: e.company.trim(),
+      position: e.position.trim(),
+      startDate: e.startDate,             // "YYYY-MM"
+      endDate: e.current ? '' : (e.endDate || ''), // "" si current true
+      current: !!e.current,
+      challenges: e.challenges ?? '',
+      achievements: e.achievements ?? '',
+      technologies: (e.technologies || []).map(t => ({ name: t.name, version: t.version || undefined })),
+      projects: (e.projects || []).map(p => ({
+        name: p.name, role: p.role, responsibilities: p.responsibilities,
+        technologies: (p.technologies || []).map(t => ({ name: t.name, version: t.version || undefined })),
+      })),
+    });
 
     const experiences = formData.experiences || [];
-    
-    if (editingExperienceIndex !== null) {
-      const updatedExperiences = [...experiences];
-      updatedExperiences[editingExperienceIndex] = currentExp;
-      updateFormData("experiences", updatedExperiences);
-      addMotivationalMessage(
-        "experience",
-        "¡Experiencia actualizada exitosamente! ✏️",
-        `${currentExp.position} en ${currentExp.company} ha sido modificada`,
-        "📝"
-      );
-      showContextualSuccess(`✏️ Tu experiencia en ${currentExp.company} ha sido actualizada!`);
-    } else {
-      updateFormData("experiences", [...experiences, currentExp]);
-      setStreakCounter(prev => ({ ...prev, experiences: prev.experiences + 1 }));
-      const expCount = experiences.length + 1;
-      const milestones: Record<number, string> = {
-        1: "¡Primera experiencia documentada! 📖",
-        3: "¡Trayectoria sólida construida! 🏗️",
-        5: "¡Portfolio profesional épico! 🎯",
-      };
-      if (milestones[expCount]) addProgress(15, milestones[expCount]);
-      addMotivationalMessage(
-        "experience",
-        "¡Experiencia agregada exitosamente! 🎉",
-        `${currentExp.position} en ${currentExp.company} ahora es parte de tu trayectoria`,
-        "💼"
-      );
-      showContextualSuccess(`🎯 Tu experiencia en ${currentExp.company} ha sido documentada!`);
-      addProgress(20);
+    let rollback: null | { type: 'replace' | 'remove'; index: number; prev?: Experience } = null;
+
+    try {
+      setSavingExp(true);
+
+      if (editingExperienceIndex !== null) {
+        // Optimistic replace
+        rollback = { type: 'replace', index: editingExperienceIndex, prev: experiences[editingExperienceIndex] };
+        const next = [...experiences];
+        next[editingExperienceIndex] = currentExp;
+        updateFormData('experiences', next);
+
+        const serverId = (rollback.prev as any)?.id;
+        if (serverId) {
+          await updateCvExperience(serverId, normalize(currentExp));
+        } else {
+          await createCvExperience(normalize(currentExp));
+        }
+
+        addMotivationalMessage('experience', '¡Experiencia actualizada exitosamente! ✏️', `${currentExp.position} en ${currentExp.company} ha sido modificada`, '📝');
+        showContextualSuccess(`✏️ Tu experiencia en ${currentExp.company} ha sido actualizada!`);
+      } else {
+        // Optimistic append
+        rollback = { type: 'remove', index: experiences.length };
+        updateFormData('experiences', [...experiences, currentExp]);
+
+        await createCvExperience(normalize(currentExp));
+
+        setStreakCounter(prev => ({ ...prev, experiences: prev.experiences + 1 }));
+        const expCount = experiences.length + 1;
+        const milestones: Record<number, string> = {
+          1: '¡Primera experiencia documentada! 📖',
+          3: '¡Trayectoria sólida construida! 🏗️',
+          5: '¡Portfolio profesional épico! 🎯',
+        };
+        if (milestones[expCount]) addProgress(15, milestones[expCount]);
+        addMotivationalMessage('experience', '¡Experiencia agregada exitosamente! 🎉', `${currentExp.position} en ${currentExp.company} ahora es parte de tu trayectoria`, '💼');
+        showContextualSuccess(`🎯 Tu experiencia en ${currentExp.company} ha sido documentada!`);
+        addProgress(20);
+      }
+
+      // Reset
+      setCurrentExp({
+        company: "", position: "", startDate: "", endDate: "", current: false,
+        challenges: "", achievements: "", technologies: [], projects: []
+      });
+      setShowSlidePanel(false);
+      setActiveStep(0);
+      setEditingExperienceIndex(null);
+    } catch (e: any) {
+      // rollback UI
+      const cur = (formData.experiences || []) as Experience[];
+      if (rollback) {
+        if (rollback.type === 'replace' && rollback.prev) {
+          const next = [...cur];
+          next[rollback.index] = rollback.prev;
+          updateFormData('experiences', next);
+        } else if (rollback.type === 'remove') {
+          const next = [...cur];
+          next.splice(rollback.index, 1);
+          updateFormData('experiences', next);
+        }
+      }
+      // feedback
+      setContextualMessage(e?.message || 'No pudimos guardar la experiencia. Intenta otra vez.');
+      setTimeout(() => setContextualMessage(null), 3000);
+    } finally {
+      setSavingExp(false);
     }
-    
-    // Reset form
-    setCurrentExp({
-      company: "",
-      position: "",
-      startDate: "",
-      endDate: "",
-      current: false,
-      challenges: "",
-      achievements: "",
-      technologies: [],
-      projects: []
-    });
-    setShowSlidePanel(false);
-    setActiveStep(0);
-    setEditingExperienceIndex(null);
-  };
+  }
 
   const editExperience = (index: number) => {
     const experience = formData.experiences[index] as Experience;
@@ -207,21 +259,30 @@ export function SlidePanelExperience({
     setEditingExperienceIndex(index);
     setActiveStep(0);
     setShowSlidePanel(true);
-  };
+  }
 
-  const deleteExperience = (index: number) => {
+  const deleteExperience = async (index: number) => {
     const experiences = formData.experiences || [];
     const deletedExp = experiences[index] as Experience;
-    const updatedExperiences = experiences.filter((_, i) => i !== index);
-    updateFormData("experiences", updatedExperiences);
-    addMotivationalMessage(
-      "experience",
-      "Experiencia eliminada",
-      `${deletedExp.position} en ${deletedExp.company} ha sido removida`,
-      "🗑️"
-    );
-    showContextualSuccess(`🗑️ Experiencia en ${deletedExp.company} eliminada`);
-  };
+    const next = experiences.filter((_, i) => i !== index);
+
+    // Optimistic
+    updateFormData('experiences', next);
+
+    try {
+      const serverId = (deletedExp as any)?.id;
+      if (serverId) {
+        await deleteCvExperience(serverId);
+      } // si no hay id, sólo era local
+      addMotivationalMessage('experience', 'Experiencia eliminada', `${deletedExp.position} en ${deletedExp.company} ha sido removida`, '🗑️');
+      showContextualSuccess(`🗑️ Experiencia en ${deletedExp.company} eliminada`);
+    } catch (e: any) {
+      // rollback
+      updateFormData('experiences', experiences);
+      setContextualMessage(e?.message || 'No pudimos eliminar la experiencia.');
+      setTimeout(() => setContextualMessage(null), 3000);
+    }
+  }
 
   const canProceedStep = (): boolean => {
     switch (activeStep) {
@@ -230,14 +291,15 @@ export function SlidePanelExperience({
       case 2: return true; // opcional
       default: return false;
     }
-  };
+  }
 
   const nextStep = () => {
     if (activeStep < experienceSteps.length - 1) setActiveStep(prev => prev + 1);
-  };
+  }
+
   const prevStep = () => {
     if (activeStep > 0) setActiveStep(prev => prev - 1);
-  };
+  }
 
   return (
     <div className="space-y-8">
@@ -280,12 +342,12 @@ export function SlidePanelExperience({
         )}
       </div>
 
-      {/* Timeline de Experiencias - Mismo contenido que antes */}
+      {/* Timeline de Experiencias */}
       {formData.experiences && formData.experiences.length > 0 && (
         <div className="space-y-6">
           <div className="relative">
             <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--axity-purple)] via-[var(--axity-violet)] to-[var(--axity-orange)]"></div>
-            
+
             {sortExperiencesByDate(formData.experiences).map((exp, index) => (
               <motion.div
                 key={index}
@@ -295,11 +357,10 @@ export function SlidePanelExperience({
                 className="relative pl-20 pb-8"
               >
                 <motion.div
-                  className={`absolute left-6 w-4 h-4 rounded-full shadow-lg ${
-                    exp.current 
-                      ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                  className={`absolute left-6 w-4 h-4 rounded-full shadow-lg ${exp.current
+                      ? 'bg-gradient-to-r from-green-400 to-emerald-500'
                       : 'bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)]'
-                  }`}
+                    }`}
                   whileHover={{ scale: 1.2 }}
                 >
                   {exp.current && (
@@ -311,7 +372,7 @@ export function SlidePanelExperience({
                   )}
                 </motion.div>
 
-                <Card 
+                <Card
                   className="group hover:shadow-xl transition-all duration-300 border-l-4 border-l-[var(--axity-purple)] cursor-pointer"
                   onClick={() => toggleExpanded(index)}
                 >
@@ -327,7 +388,7 @@ export function SlidePanelExperience({
                             <p className="text-[var(--axity-orange)] font-medium">{exp.company}</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 text-sm text-[var(--axity-gray)]">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
@@ -353,7 +414,7 @@ export function SlidePanelExperience({
                             Actual
                           </Badge>
                         )}
-                        
+
                         {/* Botones de acción */}
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
@@ -368,7 +429,7 @@ export function SlidePanelExperience({
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          
+
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -383,7 +444,7 @@ export function SlidePanelExperience({
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                          
+
                           <Button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -413,7 +474,7 @@ export function SlidePanelExperience({
                       >
                         <CardContent className="pt-0 pb-6">
                           <Separator className="mb-4" />
-                          
+
                           {/* Proyectos */}
                           {exp.projects && exp.projects.length > 0 ? (
                             <div className="space-y-4">
@@ -423,7 +484,7 @@ export function SlidePanelExperience({
                                   Proyectos destacados ({exp.projects.length})
                                 </h5>
                               </div>
-                              
+
                               <div className="grid gap-3">
                                 {exp.projects.map((project, projectIndex) => (
                                   <motion.div
@@ -447,17 +508,17 @@ export function SlidePanelExperience({
                                           <Code2 className="h-4 w-4 text-white" />
                                         </div>
                                       </div>
-                                      
+
                                       <p className="text-sm text-[var(--axity-gray)] leading-relaxed">
                                         {project.responsibilities}
                                       </p>
-                                      
+
                                       {project.technologies && project.technologies.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-3">
                                           {project.technologies.map((tech, techIndex) => (
-                                            <Badge 
-                                              key={techIndex} 
-                                              variant="secondary" 
+                                            <Badge
+                                              key={techIndex}
+                                              variant="secondary"
                                               className="text-xs bg-white/70 text-[var(--axity-violet)] border border-[var(--axity-violet)]/20"
                                             >
                                               {tech.name}{tech.version ? ` v${tech.version}` : ''}
@@ -504,7 +565,7 @@ export function SlidePanelExperience({
                                     </p>
                                   </div>
                                 )}
-                                
+
                                 {exp.challenges && (
                                   <div>
                                     <div className="flex items-center gap-2 mb-2">
@@ -590,7 +651,7 @@ export function SlidePanelExperience({
                 <span>{Math.round(((activeStep + 1) / experienceSteps.length) * 100)}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <motion.div 
+                <motion.div
                   className="bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] h-2 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${((activeStep + 1) / experienceSteps.length) * 100}%` }}
@@ -603,32 +664,31 @@ export function SlidePanelExperience({
             <div className="flex items-center justify-center px-4">
               <div className="relative flex items-end gap-6 sm:gap-8">
                 {experienceSteps.map((step, index) => {
-                  
+
                   return (
                     <div key={step.id} className="flex flex-col items-center gap-2 relative">
                       {/* Línea conectora - antes del círculo */}
                       {index > 0 && (
-                        <div 
+                        <div
                           className={`absolute h-0.5 w-6 sm:w-8 ${index - 1 < activeStep ? 'bg-[var(--axity-mint)]' : 'bg-gray-200'}`}
-                          style={{ 
+                          style={{
                             left: '-18px', // Posiciona la línea a la izquierda del círculo
                             top: '16px', // Centra verticalmente con el círculo
                             transform: 'translateX(-50%)'
-                          }} 
+                          }}
                         />
                       )}
-                      
+
                       {/* Círculo del paso */}
-                      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${
-                        index === activeStep 
-                          ? 'bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] text-white shadow-lg' 
+                      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${index === activeStep
+                          ? 'bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] text-white shadow-lg'
                           : index < activeStep
-                          ? 'bg-[var(--axity-mint)] text-white'
-                          : 'bg-gray-200 text-gray-500'
-                      }`}>
+                            ? 'bg-[var(--axity-mint)] text-white'
+                            : 'bg-gray-200 text-gray-500'
+                        }`}>
                         {index < activeStep ? <CheckCircle className="h-4 w-4" /> : index + 1}
                       </div>
-                      
+
                       {/* Título del paso - debajo del círculo */}
                       <div className="text-center min-w-0">
                         <div className={`text-xs font-medium leading-tight whitespace-nowrap ${index === activeStep ? 'text-[var(--axity-purple)]' : 'text-gray-500'}`}>
@@ -725,8 +785,8 @@ export function SlidePanelExperience({
                               <Checkbox
                                 id="current-panel"
                                 checked={currentExp.current}
-                                onCheckedChange={(checked) => setCurrentExp(prev => ({ 
-                                  ...prev, 
+                                onCheckedChange={(checked) => setCurrentExp(prev => ({
+                                  ...prev,
                                   current: !!checked,
                                   endDate: checked ? "" : prev.endDate
                                 }))}
@@ -766,7 +826,7 @@ export function SlidePanelExperience({
                             {currentExp.projects.length} proyecto{currentExp.projects.length !== 1 ? 's' : ''} agregado{currentExp.projects.length !== 1 ? 's' : ''}
                           </span>
                         </div>
-                        
+
                         {currentExp.projects.map((project, index) => (
                           <motion.div
                             key={index}
@@ -782,9 +842,9 @@ export function SlidePanelExperience({
                                 {project.technologies.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
                                     {project.technologies.map((tech, techIndex) => (
-                                      <Badge 
-                                        key={techIndex} 
-                                        variant="secondary" 
+                                      <Badge
+                                        key={techIndex}
+                                        variant="secondary"
                                         className="text-xs bg-[var(--axity-violet)]/10 text-[var(--axity-violet)]"
                                       >
                                         {tech.name}{tech.version ? ` ${tech.version}` : ''}
@@ -910,7 +970,7 @@ export function SlidePanelExperience({
                             <p className="text-sm text-[var(--axity-gray)] mb-4 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
                               💡 <strong>¿Qu�� agregar aquí?</strong> Enumera las tecnologías, lenguajes, frameworks, bases de datos, y herramientas que usaste específicamente en este proyecto.
                             </p>
-                            
+
                             {/* Lista de tecnologías agregadas */}
                             {currentProject.technologies.length > 0 && (
                               <div className="mb-4">
@@ -922,8 +982,8 @@ export function SlidePanelExperience({
                                 </div>
                                 <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
                                   {currentProject.technologies.map((tech, index) => (
-                                    <Badge 
-                                      key={index} 
+                                    <Badge
+                                      key={index}
                                       variant="secondary"
                                       className="bg-white text-[var(--axity-violet)] border border-[var(--axity-violet)]/20 flex items-center gap-2 px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow"
                                     >
@@ -959,7 +1019,7 @@ export function SlidePanelExperience({
                                   <Plus className="h-4 w-4 text-[var(--axity-violet)]" />
                                   <span className="font-medium text-[var(--axity-purple)]">Agregar nueva tecnología</span>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                   <div className="space-y-1">
                                     <Label className="text-xs text-[var(--axity-gray)] font-medium">
@@ -972,7 +1032,7 @@ export function SlidePanelExperience({
                                       className="bg-white border-[var(--axity-violet)]/20 focus:border-[var(--axity-violet)] focus:ring-[var(--axity-violet)]/20"
                                     />
                                   </div>
-                                  
+
                                   <div className="space-y-1">
                                     <Label className="text-xs text-[var(--axity-gray)] font-medium">
                                       Versión (opcional)
@@ -984,7 +1044,7 @@ export function SlidePanelExperience({
                                       className="bg-white border-[var(--axity-violet)]/20 focus:border-[var(--axity-violet)] focus:ring-[var(--axity-violet)]/20"
                                     />
                                   </div>
-                                  
+
                                   <div className="space-y-1">
                                     <Label className="text-xs text-transparent font-medium">
                                       Acción
@@ -1011,7 +1071,7 @@ export function SlidePanelExperience({
                                     </Button>
                                   </div>
                                 </div>
-                                
+
                                 {/* Ejemplos de tecnologías comunes */}
                                 <div className="mt-4 pt-3 border-t border-gray-200">
                                   <p className="text-xs text-[var(--axity-gray)] mb-2">
@@ -1075,7 +1135,7 @@ export function SlidePanelExperience({
                                   setShowProjectForm(false);
                                   setNewTechName("");
                                   setNewTechVersion("");
-                                  
+
                                   showContextualSuccess(`🚀 Proyecto "${currentProject.name}" agregado exitosamente!`);
                                 }
                               }}
@@ -1155,12 +1215,12 @@ export function SlidePanelExperience({
               <div className="flex gap-2">
                 {activeStep === experienceSteps.length - 1 ? (
                   <Button
-                    onClick={addExperience}
-                    disabled={!canProceedStep()}
+                    onClick={() => void addExperience()}
+                    disabled={!canProceedStep() || savingExp || loadingServerExp}
                     className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Guardar experiencia
+                    {savingExp ? 'Guardando…' : 'Guardar experiencia'}
                   </Button>
                 ) : (
                   <Button

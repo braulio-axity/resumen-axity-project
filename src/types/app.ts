@@ -15,6 +15,7 @@ export interface FormData {
 
   skills: Array<{ name: string; level: string; version?: string }>;
   experiences: Array<{
+    id?: string;
     company: string;
     position: string;
     startDate: string;
@@ -22,8 +23,9 @@ export interface FormData {
     current: boolean;
     challenges: string;
     achievements: string;
-    technologies: string[];
+    technologies: Array<{ name:string; version?:string }>;
     projects: Array<{
+      id?: string;
       name: string;
       role: string;
       responsibilities: string;

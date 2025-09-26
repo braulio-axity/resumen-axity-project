@@ -51,23 +51,23 @@ import type {
   UpdateTechnologyPayload,
 } from "@/types/technology";
 import {
-  listTechnologies,
   createTechnology,
   updateTechnology,
   deleteTechnology,
 } from "@/api/technologies";
+import { useTechnologiesContext } from "@/context/TechnologiesContext";
+import AdminSuggestionsTab from "./AdminSuggestionsTab";
 
 const CATEGORY_OPTIONS = [
-  "Frontend",
+  "Frontend/UI",
   "Backend",
-  "DevOps",
-  "Database",
-  "Cloud",
+  "Cloud/DevOps",
+  "Base de Datos",
   "Mobile",
-  "Testing",
+  "Testing/QA",
   "Data",
   "AI/ML",
-  "API",
+  "APIs/Integraciones",
   "Security",
 ];
 
@@ -84,27 +84,25 @@ type FormState = {
   };
 };
 
+const TABS = [
+  { key: 'dashboard', label: 'Tecnologías' },
+  { key: 'suggestions', label: 'Sugerencias'},
+];
+
 export default function TechnologiesAdmin() {
   const { user, isAuthenticated } = useAuth();
+  const isAdmin = !!user && (user as any)?.role === "ADMIN";
+  const [active, setActive] = useState<string>('suggestions');
 
-  const isAdmin =
-    !!user &&
-    (user as any)?.role === 'ADMIN';
+  // 👉 Fuente de datos global via Provider
+  const { items: globalItems, loading: ctxLoading, refresh } = useTechnologiesContext();
 
-  const [items, setItems] = useState<Technology[]>([]);
-  const [total, setTotal] = useState(0);
-
+  // Estado de UI local (filtros/paginación/Dialog)
   const [page, setPage] = useState(1);
   const [pageSize] = useState(12);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("");
-
-  const [loading, setLoading] = useState(false);
-  const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(total / pageSize)),
-    [total, pageSize]
-  );
 
   const [form, setForm] = useState<FormState>({
     mode: "create",
@@ -113,33 +111,38 @@ export default function TechnologiesAdmin() {
     values: { name: "", version: "", category: "", color: "" },
   });
 
-  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id?: string; name?: string }>({
-    open: false,
-  });
+  const [confirmDelete, setConfirmDelete] = useState<{
+    open: boolean;
+    id?: string;
+    name?: string;
+  }>({ open: false });
+
+  // Filtro en cliente usando el catálogo global
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return (globalItems ?? []).filter((t) => {
+      const okSearch =
+        !s ||
+        t.name.toLowerCase().includes(s) ||
+        (t.version ?? "").toLowerCase().includes(s) ||
+        t.category.toLowerCase().includes(s);
+      const okCategory = !category || t.category === category;
+      return okSearch && okCategory;
+    });
+  }, [globalItems, search, category]);
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  const pageItems = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page, pageSize]);
 
   useEffect(() => {
-    if (!isAuthenticated || !isAdmin) return;
-    void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, search, category, isAuthenticated, isAdmin]);
+    setPage(1);
+  }, [search, category]);
 
-  async function refresh() {
-    try {
-      setLoading(true);
-      const res = await listTechnologies({
-        page,
-        pageSize,
-        search: search.trim() || undefined,
-        category: category || undefined,
-      });
-      setItems(res.data);
-      setTotal(res.total);
-    } catch (e: any) {
-      toast.error(e.message ?? "Error cargando tecnologías");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function openCreate() {
     setForm({
@@ -169,7 +172,10 @@ export default function TechnologiesAdmin() {
     setForm((prev) => ({ ...prev, open: false, submitting: false }));
   }
 
-  function handleChange<K extends keyof FormState["values"]>(key: K, val: FormState["values"][K]) {
+  function handleChange<K extends keyof FormState["values"]>(
+    key: K,
+    val: FormState["values"][K]
+  ) {
     setForm((prev) => ({ ...prev, values: { ...prev.values, [key]: val } }));
   }
 
@@ -214,11 +220,10 @@ export default function TechnologiesAdmin() {
         toast.success("Tecnología actualizada");
       }
       closeForm();
-      // Si estamos en una página no 1 y la lista queda vacía tras cambios, reacomodamos
-      if (page > 1 && items.length === 1) {
+      await refresh();
+
+      if (page > 1 && pageItems.length === 0) {
         setPage((p) => Math.max(1, p - 1));
-      } else {
-        void refresh();
       }
     } catch (e: any) {
       toast.error(e.message ?? "Error al guardar");
@@ -234,10 +239,11 @@ export default function TechnologiesAdmin() {
       await deleteTechnology(id);
       toast.success("Tecnología eliminada");
       setConfirmDelete({ open: false });
-      if (page > 1 && items.length === 1) {
+
+      await refresh();
+
+      if (page > 1 && pageItems.length === 1) {
         setPage((p) => Math.max(1, p - 1));
-      } else {
-        void refresh();
       }
     } catch (e: any) {
       toast.error(e.message ?? "Error al eliminar");
@@ -270,6 +276,21 @@ export default function TechnologiesAdmin() {
   return (
     <div className="container mx-auto px-6 py-6">
       <Toaster richColors position="top-right" />
+      <div className="p-4">
+        <nav className="mb-4 flex gap-4 border-b pb-2">
+          {TABS.map(t => (
+            <button
+              key={t.key}
+              onClick={() => setActive(t.key)}
+              className={`pb-2 ${active === t.key ? 'border-b-2 border-emerald-600 font-semibold' : 'text-gray-600'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+
+        {active === 'dashboard' && (
+          <>
 
       {/* Encabezado */}
       <div className="flex items-center justify-between mb-6">
@@ -298,10 +319,7 @@ export default function TechnologiesAdmin() {
                 className="pl-9"
                 placeholder="Buscar por nombre…"
                 value={search}
-                onChange={(e) => {
-                  setPage(1);
-                  setSearch(e.target.value);
-                }}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
@@ -309,7 +327,6 @@ export default function TechnologiesAdmin() {
               <Select
                 value={category}
                 onValueChange={(v) => {
-                  setPage(1);
                   setCategory(v === "__all__" ? "" : v);
                 }}
               >
@@ -353,20 +370,20 @@ export default function TechnologiesAdmin() {
               </thead>
               <tbody>
                 <AnimatePresence initial={false}>
-                  {loading ? (
+                  {ctxLoading ? (
                     <tr>
                       <td colSpan={5} className="p-6 text-center text-gray-500">
                         Cargando…
                       </td>
                     </tr>
-                  ) : items.length === 0 ? (
+                  ) : pageItems.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="p-6 text-center text-gray-500">
                         No hay tecnologías para mostrar
                       </td>
                     </tr>
                   ) : (
-                    items.map((t) => (
+                    pageItems.map((t) => (
                       <motion.tr
                         key={t.id}
                         initial={{ opacity: 0, y: 8 }}
@@ -376,15 +393,14 @@ export default function TechnologiesAdmin() {
                       >
                         <td className="p-3">
                           <div className="font-medium text-gray-900">{t.name}</div>
-                          {t.version ? (
-                            <div className="text-xs text-gray-500">ID: {t.id}</div>
-                          ) : (
-                            <div className="text-xs text-gray-400">ID: {t.id}</div>
-                          )}
+                          <div className="text-xs text-gray-400">ID: {t.id}</div>
                         </td>
                         <td className="p-3">
                           {t.version ? (
-                            <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
+                            <Badge
+                              variant="secondary"
+                              className="bg-blue-50 text-blue-700 border-blue-200"
+                            >
                               {t.version}
                             </Badge>
                           ) : (
@@ -418,7 +434,9 @@ export default function TechnologiesAdmin() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setConfirmDelete({ open: true, id: t.id, name: t.name })}
+                              onClick={() =>
+                                setConfirmDelete({ open: true, id: t.id, name: t.name })
+                              }
                             >
                               <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
@@ -461,6 +479,11 @@ export default function TechnologiesAdmin() {
         </CardContent>
       </Card>
 
+          </>
+        )}
+        {active === 'suggestions' && <AdminSuggestionsTab />}
+      </div>
+
       {/* Dialog Crear/Editar */}
       <Dialog open={form.open} onOpenChange={(open) => setForm((p) => ({ ...p, open }))}>
         <DialogContent className="sm:max-w-[520px] ax-dialog">
@@ -469,7 +492,10 @@ export default function TechnologiesAdmin() {
               {form.mode === "create" ? "Nueva tecnología" : "Editar tecnología"}
             </DialogTitle>
             <DialogDescription>
-              Completa la información. <span className="text-gray-500">El nombre y la categoría son obligatorios.</span>
+              Completa la información.{" "}
+              <span className="text-gray-500">
+                El nombre y la categoría son obligatorios.
+              </span>
             </DialogDescription>
           </DialogHeader>
 
@@ -544,17 +570,24 @@ export default function TechnologiesAdmin() {
       </Dialog>
 
       {/* Confirmación Eliminar */}
-      <AlertDialog open={confirmDelete.open} onOpenChange={(open) => setConfirmDelete((p) => ({ ...p, open }))}>
+      <AlertDialog
+        open={confirmDelete.open}
+        onOpenChange={(open) => setConfirmDelete((p) => ({ ...p, open }))}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar tecnología</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Seguro que deseas eliminar <b>{confirmDelete.name}</b>? Esta acción no se puede deshacer.
+              ¿Seguro que deseas eliminar <b>{confirmDelete.name}</b>? Esta acción no se
+              puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={() => void confirmDeleteById()}>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => void confirmDeleteById()}
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

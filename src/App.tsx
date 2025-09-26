@@ -30,12 +30,12 @@ import type {
   UpdateFormData,
   AddMotivationalMessage,
   StreakCounter,
+  ConsultantLevel,
 } from "./types/app";
 import { consultantLevels, steps } from "./constants";
 
 export default function App() {
-  const { isAuthenticated, user, logout } = useAuth();
-  console.log('first 123341', isAuthenticated)
+  const { isAuthenticated, user, logout, loading } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [progress, setProgress] = useState(50);
@@ -56,13 +56,11 @@ export default function App() {
   const messageIdCounter = useRef(0);
 
   const [formData, setFormData] = useState<FormData>({
-    // Se completan después del login
     firstName: "",
     lastName: "",
     email: "",
     employeeId: "",
     level: "junior",
-    // Datos del formulario
     skills: [],
     experiences: [],
     education: [],
@@ -96,19 +94,26 @@ export default function App() {
     },
   });
 
-  // Cuando cambia el usuario logueado, copia su email (y otros campos si tu backend los devuelve)
   useEffect(() => {
-    if (user?.email) {
-      setFormData((prev) => ({
+    if (!user) return;
+
+    const normalizeLevel = (val?: unknown): ConsultantLevel => {
+      const candidate = typeof val === "string" ? (val as ConsultantLevel) : undefined;
+      const allowed = Object.keys(consultantLevels) as Array<string>;
+      return candidate && allowed.includes(candidate) ? (candidate as ConsultantLevel) : "junior";
+    };
+  
+    setFormData((prev: FormData): FormData => {
+      return {
         ...prev,
-        email: user.email,
-        firstName: user.firstName ?? prev.firstName,
-        lastName: user.lastName ?? prev.lastName,
-        employeeId: user.employeeId ?? prev.employeeId,
-        level: user.level ?? 'junior',
-      }));
-    }
-  }, [user?.email]);
+        email: user.email ?? prev.email,
+        firstName: prev.firstName && prev.firstName.trim() !== "" ? prev.firstName : (user.firstName ?? prev.firstName),
+        lastName: prev.lastName && prev.lastName.trim() !== "" ? prev.lastName : (user.lastName ?? prev.lastName),
+        employeeId: prev.employeeId && prev.employeeId.trim() !== "" ? prev.employeeId : (user.employeeId ?? prev.employeeId),
+        level: prev.level ?? normalizeLevel(user.level),
+      };
+    });
+  }, [user]);
 
   const updateFormData: UpdateFormData = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -259,7 +264,17 @@ export default function App() {
     }
   };
 
-  // 🔐 Si NO está autenticado, muestra el login
+  if (loading) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-gradient-to-br from-gray-50 via-white to-purple-50 p-6">
+        <div className="animate-pulse text-center">
+          <div className="h-8 w-48 bg-gray-200 rounded mb-3" />
+          <p className="text-gray-500">Cargando información…</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen grid place-items-center bg-gradient-to-br from-gray-50 via-white to-purple-50 p-6">
@@ -269,11 +284,11 @@ export default function App() {
     );
   }
 
-  // Adaptar steps al tipo HeaderStep (id como string, solo lo que necesita el header)
   const headerSteps = steps.map((s) => ({
     id: String(s.id),
     shortTitle: s.shortTitle,
     icon: s.icon,
+    title: s.title,
   }));
 
   const autoSaveProps = {
@@ -339,7 +354,8 @@ export default function App() {
 
       {/* HEADER */}
       <AxityHeader
-        steps={headerSteps}
+        // casting a `any` to avoid strict incompatibilities — ajusta si quieres tipado exacto
+        steps={headerSteps as unknown as any}
         currentStep={currentStep}
         navigateToStep={navigateToStep}
         getStepCompletion={getStepCompletion}

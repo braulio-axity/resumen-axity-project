@@ -1,13 +1,19 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { AuthProvider } from "@/context/AuthContext";
+import { configureApiAuth } from "@/api/technologies";
 import './index.css'
 import App from './App.tsx'
-import { AuthProvider } from './context/AuthContext.tsx'
+import { TechnologiesProvider } from "./context/TechnologiesContext.tsx";
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+configureApiAuth(() => localStorage.getItem("token"));
+
+createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
     <AuthProvider>
-      <App />
+      <TechnologiesProvider>
+        <App />
+      </TechnologiesProvider>
     </AuthProvider>
-  </StrictMode>,
-)
+  </React.StrictMode>
+);

@@ -1,6 +1,5 @@
 import type { ConsultantLevel } from "@/types/app";
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { configureApiAuth } from "@/api/technologies"; // <- para inyectar el token en tus APIs
 
 type User = {
   email: string;
@@ -8,7 +7,7 @@ type User = {
   lastName?: string;
   employeeId?: string;
   level?: ConsultantLevel;
-  role?: string;
+  role?: string; // "ADMIN" | "COLLAB"
 };
 
 type AuthContextType = {
@@ -17,100 +16,60 @@ type AuthContextType = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  /** Devuelve el token si es válido (no expirado), si no, null */
-  getValidToken: () => string | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
-/** -------- Helpers JWT -------- */
-function parseJwt(token: string): any | null {
+/** Decodifica el payload del JWT (sin verificar firma; solo para hidratar UI). */
+function decodeJwt<T = any>(token: string): T | null {
   try {
-    const base64 = token.split(".")[1];
-    if (!base64) return null;
-    const payload = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(payload);
+    const [, payload] = token.split(".");
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(json) as T;
   } catch {
     return null;
   }
 }
 
-function isJwtExpired(token: string, skewMs = 30000): boolean {
-  const payload = parseJwt(token);
-  if (!payload || typeof payload.exp !== "number") return true; // si no tiene exp, considéralo inválido
-  const expMs = payload.exp * 1000;
-  return Date.now() > expMs - skewMs;
-}
-/** -------------------------------- */
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [verified, setVerified] = useState(false); // verificación con backend
 
-  // Restaura sesión y valida
+  // Restaurar sesión e hidratar usuario/rol desde el token si hace falta
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
     const storedToken = localStorage.getItem("token");
+    const storedUserRaw = localStorage.getItem("user");
 
-    if (storedToken && !isJwtExpired(storedToken)) {
+    if (storedToken) {
+      let nextUser: User | null = storedUserRaw ? JSON.parse(storedUserRaw) : null;
+
+      // Si falta info crítica (role/email) la tomamos del JWT (Nest firma: { sub, role, email })
+      const payload = decodeJwt<{ email?: string; role?: string }>(storedToken);
+      if (!nextUser || !nextUser.role || !nextUser.email) {
+        nextUser = {
+          ...nextUser,
+          email: nextUser?.email ?? payload?.email ?? "",
+          role: nextUser?.role ?? payload?.role,
+        };
+        localStorage.setItem("user", JSON.stringify(nextUser));
+      }
+
       setToken(storedToken);
-      if (storedUser) setUser(JSON.parse(storedUser));
-      verifyTokenWithAPI(storedToken)
-        .then((serverUser) => {
-          // si tu /auth/me devuelve el user, úsalo para poblar
-          if (serverUser && serverUser.email) {
-            setUser((prev) => ({ ...prev, ...serverUser }));
-            localStorage.setItem("user", JSON.stringify({ ...(storedUser ? JSON.parse(storedUser) : {}), ...serverUser }));
-          }
-          setVerified(true);
-        })
-        .catch(() => {
-          // token inválido o rechazado por backend
-          hardLogout();
-        })
-        .finally(() => setLoading(false));
-    } else {
-      // no token o expirado
-      hardLogout();
-      setLoading(false);
+      setUser(nextUser);
     }
+
+    setLoading(false);
   }, []);
-
-  // Inyecta token válido a tu capa API (technologies.ts)
-  useEffect(() => {
-    configureApiAuth(() => (token && !isJwtExpired(token) ? token : null));
-  }, [token]);
-
-  async function verifyTokenWithAPI(currentToken: string): Promise<User | null> {
-    // Ajusta la ruta si tu backend usa /auth/profile u otra
-    const res = await fetch(`${API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${currentToken}` },
-      mode: "cors",                  // explícito
-      credentials: "omit",
-    });
-    if (!res.ok) throw new Error(`Token inválido (${res.status})`);
-    try {
-      const data = await res.json();
-      // modela lo que devuelva tu endpoint
-      return (data?.user ?? data) as User;
-    } catch {
-      return null;
-    }
-  }
 
   const login = async (email: string, password: string) => {
     const res = await fetch(`${API_URL}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      mode: "cors",
-      credentials: "omit",
       body: JSON.stringify({ email, password }),
     });
-    console.log('first login check', res)
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
@@ -118,59 +77,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const data: { access_token: string; user?: User } = await res.json();
-    const newToken = data.access_token;
-    console.log('second login check', newToken)
 
-    if (!newToken || isJwtExpired(newToken)) {
-      throw new Error("El token recibido es inválido o está expirado");
+    localStorage.setItem("token", data.access_token);
+
+    // Preferimos el user del backend; si no viene, usamos el payload del JWT
+    let nextUser: User | null = data.user ?? null;
+    if (!nextUser) {
+      const payload = decodeJwt<{ email?: string; role?: string }>(data.access_token);
+      nextUser = { email: payload?.email ?? email, role: payload?.role };
     }
 
-    // Verifica contra API y normaliza user
-    let profile: User | null = null;
-    try {
-      profile = await verifyTokenWithAPI(newToken);
-    } catch {
-      // Si falla la verificación del token recién emitido, fuerza logout
-      throw new Error("No se pudo validar la sesión con el servidor");
-    }
-
-    const finalUser: User = profile ?? data.user ?? { email };
-    localStorage.setItem("token", newToken);
-    localStorage.setItem("user", JSON.stringify(finalUser));
-    setToken(newToken);
-    setUser(finalUser);
-    setVerified(true);
+    localStorage.setItem("user", JSON.stringify(nextUser));
+    setUser(nextUser);
+    setToken(data.access_token);
   };
 
-  const hardLogout = () => {
+  const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setToken(null);
     setUser(null);
-    setVerified(false);
   };
-
-  const logout = () => {
-    hardLogout();
-  };
-
-  const getValidToken = () => {
-    if (token && !isJwtExpired(token)) return token;
-    return null;
-  };
-
-  const isAuthenticated = !!getValidToken() && verified;
 
   const value = useMemo(
     () => ({
-      isAuthenticated,
+      isAuthenticated: !!token,
       user,
       loading,
       login,
       logout,
-      getValidToken,
     }),
-    [isAuthenticated, user, loading]
+    [token, user, loading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

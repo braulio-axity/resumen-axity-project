@@ -20,7 +20,6 @@ import {
   ShieldCheck
 } from "lucide-react";
 
-// ⬇️ Importa tus tipos centralizados
 import type {
   FormData,
   UpdateFormData,
@@ -28,13 +27,12 @@ import type {
   StreakCounter
 } from "../../types/app";
 
-// Deriva tipos de los arrays para evitar duplicación
 type EducationItem = NonNullable<FormData["education"]>[number];
 type CertificationItem = NonNullable<FormData["certifications"]>[number];
 
 interface EducationStepProps {
   formData: FormData;
-  updateFormData: UpdateFormData; // (field: keyof FormData, value: unknown) => void
+  updateFormData: UpdateFormData; 
   addProgress: (points: number, milestone?: string) => void;
   addMotivationalMessage: AddMotivationalMessage;
   streakCounter: StreakCounter;
@@ -52,15 +50,13 @@ export function EducationStep({
   const [showCertForm, setShowCertForm] = useState<boolean>(false);
   const [contextualMessage, setContextualMessage] = useState<string | null>(null);
 
-  // Estado tipado a partir de tus tipos
+
   const [currentEducation, setCurrentEducation] = useState<EducationItem>({
     institution: "",
     degree: "",
     field: "",
     year: "",
     achievements: "",
-    // Estos campos deben existir en tu tipo Education dentro de FormData
-    // (status, isInternational, hasApostille)
     status: "" as EducationItem["status"],
     isInternational: false as EducationItem["isInternational"],
     hasApostille: false as EducationItem["hasApostille"]
@@ -118,9 +114,8 @@ export function EducationStep({
     }, 3000);
   };
 
-  // Validación de año
   const validateYear = (year: string): { isValid: boolean; message: string | null } => {
-    if (!year) return { isValid: true, message: null }; // vacío puede ser válido según estado
+    if (!year) return { isValid: true, message: null }
 
     if (year.length !== 4) {
       return { isValid: false, message: "📅 El año debe tener exactamente 4 dígitos" };
@@ -139,7 +134,6 @@ export function EducationStep({
     return { isValid: true, message: null };
   };
 
-  // Handlers de año
   const handleYearChange = (value: string) => {
     const numericValue = value.replace(/\D/g, "").slice(0, 4);
     setCurrentEducation(prev => ({ ...prev, year: numericValue }));
@@ -150,7 +144,6 @@ export function EducationStep({
     setCurrentCert(prev => ({ ...prev, year: numericValue }));
   };
 
-  // Validaciones de formularios
   const isEducationFormValid = (): boolean => {
     if (!currentEducation.institution || !currentEducation.degree || !currentEducation.status) {
       return false;
@@ -185,10 +178,8 @@ export function EducationStep({
     });
     setShowEducationForm(false);
 
-    // streak
     setStreakCounter(prev => ({ ...prev, education: prev.education + 1 }));
 
-    // milestones
     const educationMilestones: Record<number, string[]> = {
       1: ["¡Fundación académica establecida! 🏛️", "¡Tu preparación formal brilla! ✨", "¡Base de conocimiento sólida! 🧠"],
       2: ["¡Formación académica diversa! 📚", "¡Tu preparación es excepcional! 🌟", "¡Background educativo impresionante! 🎓"],
@@ -233,10 +224,8 @@ export function EducationStep({
     setCurrentCert({ name: "", issuer: "", year: "", credentialId: "" });
     setShowCertForm(false);
 
-    // streak
     setStreakCounter(prev => ({ ...prev, certifications: prev.certifications + 1 }));
 
-    // milestones
     const certificationMilestones: Record<number, string[]> = {
       1: ["¡Primera certificación desbloqueada! 🏅", "¡Tu expertise está validada! ✅", "¡Credencial técnica conseguida! 🎖️"],
       3: ["¡Portfolio de certificaciones sólido! 💪", "¡Tus skills están bien respaldados! 🛡️", "¡Certificaciones de peso! ⚖️"],
@@ -264,7 +253,6 @@ export function EducationStep({
     showContextualSuccess(`🏆 Certificación ${currentCert.name} agregada exitosamente!`);
   };
 
-  // Timeline (orden y agrupación)
   const createTimelineData = () => {
     const education = (formData.education ?? []).map((edu: EducationItem) => ({
       ...edu,
@@ -296,16 +284,15 @@ export function EducationStep({
 
   return (
     <div className="space-y-8">
-      {/* Contextual Success Message */}
       <AnimatePresence>
         {contextualMessage && (
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl p-4 shadow-lg border border-emerald-200"
+            className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl p-4 shadow-lg border border-emerald-200"
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-[var(--axity-mint)] to-[var(--axity-purple)]">
               <motion.div
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 0.6 }}
@@ -319,7 +306,6 @@ export function EducationStep({
         )}
       </AnimatePresence>
 
-      {/* Timeline View - Estudios completados y certificaciones */}
       {timelineData.completed.length > 0 && (
         <div className="relative">
           <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-6 flex items-center gap-2">
@@ -560,7 +546,7 @@ export function EducationStep({
                     </p>
                     <Button 
                       onClick={() => setShowEducationForm(true)}
-                      className="mt-4 bg-axity-gradient-cool text-white"
+                      className="mt-4 w-full bg-gradient-to-r from-[var(--axity-mint)] to-[var(--axity-mint)] hover:from-emerald-500 hover:to-teal-600 text-white"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar formación académica 📚
@@ -803,7 +789,7 @@ export function EducationStep({
                   <Button
                     onClick={addEducation}
                     disabled={!isEducationFormValid()}
-                    className="flex-1 bg-axity-gradient-cool text-white"
+                    className="flex-1 bg-gradient-to-r from-[var(--axity-mint)] to-[var(--axity-mint)] hover:from-emerald-500 hover:to-teal-600 text-white"
                   >
                     Guardar 📚
                   </Button>
@@ -831,7 +817,7 @@ export function EducationStep({
                     </p>
                     <Button 
                       onClick={() => setShowCertForm(true)}
-                      className="mt-4 bg-axity-gradient-secondary text-white"
+                      className="mt-4 w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-300 hover:to-yellow-400 text-white"
                     >
                       <Plus className="h-4 w-4 mr-2" />
                       Agregar certificación técnica 🏆
@@ -940,7 +926,7 @@ export function EducationStep({
                   <Button
                     onClick={addCertification}
                     disabled={!isCertificationFormValid()}
-                    className="flex-1 bg-axity-gradient-secondary text-white"
+                    className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-300 hover:to-yellow-400 text-white"
                   >
                     Guardar 🏆
                   </Button>
