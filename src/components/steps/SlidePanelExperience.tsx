@@ -38,16 +38,16 @@ import type {
   AddMotivationalMessage,
   StreakCounter,
 } from "./../../types/app"
+import { Loading } from '../ui/Loading';
 
-// Reutiliza los tipos desde FormData para evitar duplicar estructuras
 type Experience = FormData["experiences"][number]
 type Project = Experience["projects"][number]
 
 interface ExperienceStepProps {
   formData: FormData;
-  updateFormData: UpdateFormData;                    // (field: keyof FormData, value: any) => void
+  updateFormData: UpdateFormData;
   addProgress: (points: number, milestone?: string) => void;
-  addMotivationalMessage: AddMotivationalMessage;    // "skill" | "experience" | ...
+  addMotivationalMessage: AddMotivationalMessage;
   streakCounter: StreakCounter;
   setStreakCounter: React.Dispatch<React.SetStateAction<StreakCounter>>;
 }
@@ -303,6 +303,8 @@ export function SlidePanelExperience({
 
   return (
     <div className="space-y-8">
+      {/* Loading */}
+      {loadingServerExp &&  <Loading show fullscreen label="Cargando información..." size="lg" />}
       {/* Contextual Success Message */}
       <AnimatePresence>
         {contextualMessage && (

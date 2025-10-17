@@ -25,9 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-/* =========================
-   Tipos
-   ========================= */
+
 interface ExperienceStepProps {
   formData: any;
   updateFormData: (field: string, value: any) => void;
@@ -74,7 +72,6 @@ export function ExperienceStep({
   streakCounter,
   setStreakCounter,
 }: ExperienceStepProps) {
-  // Evita warning por prop no usada (la prop se conserva por compatibilidad)
   void streakCounter;
 
   const [showStoryBuilder, setShowStoryBuilder] = useState(false);
@@ -105,7 +102,6 @@ export function ExperienceStep({
     null
   );
 
-  // Mensajes dinámicos para experiencias
   const experienceMessages: string[] = [
     "¡Tu historia profesional cobra vida! 📖",
     "¡Documentando logros como un pro! 🏆",
@@ -190,13 +186,11 @@ export function ExperienceStep({
       setStoryStep(0);
       addProgress(10);
 
-      // Update streak counter
       setStreakCounter((prev: any) => ({
         ...prev,
         experiences: (prev?.experiences ?? 0) + 1,
       }));
 
-      // Mensajes especiales por hitos de experiencia
       const experienceMilestones: Partial<Record<number, string[]>> = {
         1: [
           "¡Tu historia profesional inicia! 📖",
@@ -258,11 +252,11 @@ export function ExperienceStep({
       case 2:
         return currentExp.startDate !== "";
       case 3:
-        return true; // proyectos opcionales
+        return true;
       case 4:
-        return true; // challenges opcional
+        return true;
       case 5:
-        return true; // achievements opcional
+        return true;
       default:
         return false;
     }
@@ -292,7 +286,6 @@ export function ExperienceStep({
     setShowStoryBuilder(false);
   };
 
-  /* ====== Project helpers ====== */
   const addTechnologyToProject = () => {
     const name = newTechName.trim();
     if (!name) return;
@@ -356,14 +349,12 @@ export function ExperienceStep({
     }));
   };
 
-  /* ====== Lista tipada para render ====== */
   const experiencesList: Experience[] = Array.isArray(formData.experiences)
     ? (formData.experiences as Experience[])
     : [];
 
   return (
     <div className="space-y-8">
-      {/* Contextual Success Message */}
       <AnimatePresence>
         {contextualMessage && (
           <motion.div

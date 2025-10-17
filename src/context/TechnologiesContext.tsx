@@ -25,7 +25,6 @@ export const TechnologiesProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [items, setItems] = useState<Technology[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // 1) Hidratar desde cache sincrónicamente
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
@@ -43,7 +42,8 @@ export const TechnologiesProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   useEffect(() => {
-    void refresh(); // sin force, solo para poblar/actualizar
+    const checkSession = localStorage.getItem('token');
+    if (checkSession) return void refresh();
   }, []);
 
   const refresh = async (_opts?: { force?: boolean }) => {
@@ -52,7 +52,6 @@ export const TechnologiesProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const res = await listTechnologies({ page: 1, pageSize: 1000, shape: "array" as any });
       const newItems = res.data ?? [];
       setItems((prev) => {
-        // Evita re-render si la data es idéntica
         const same =
           prev.length === newItems.length &&
           prev.every((p, i) =>

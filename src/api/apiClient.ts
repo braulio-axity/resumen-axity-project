@@ -24,15 +24,26 @@ function toQuery(params: Record<string, unknown>) {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
+  if (res.status && res.status === 401) {
+    localStorage.clear()
+    location.replace('/login')
+  }
   if (!res.ok) {
     let msg = `Error ${res.status}`;
+    console.log('first', res)
     try {
       const data = await res.json();
       msg = data?.message ?? msg;
-    } catch {}
+      console.log('fourth', data)
+    } catch {
+      console.log('third', res)
+
+    }
     throw new Error(msg);
   }
   try {
+    console.log('seciond', res)
+
     return (await res.json()) as T;
   } catch {
     return undefined as unknown as T;

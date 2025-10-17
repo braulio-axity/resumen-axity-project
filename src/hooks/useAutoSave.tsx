@@ -73,7 +73,6 @@ export function useAutoSave({
       }
     } catch (error) {
       console.warn('Error loading data from localStorage:', error);
-      // Limpiar datos corruptos
       localStorage.removeItem(key);
     }
     return null;

@@ -361,9 +361,9 @@ export default function App() {
         getStepCompletion={getStepCompletion}
         progressPercent={calculateProgress()}
         user={{
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email || user?.email,
+          firstName: user?.firstName,
+          lastName: user?.lastName,
+          email: user?.email,
         }}
         levelInfo={currentLevelInfo}
         autoSave={autoSaveProps}

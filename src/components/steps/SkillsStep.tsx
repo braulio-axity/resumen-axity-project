@@ -41,6 +41,7 @@ import { skillKey } from "@/utils/skills";
 // 👉 Contexto de tecnologías
 import { useTechnologiesContext } from "@/context/TechnologiesContext";
 import { createSuggestion } from "@/api/techSuggestions";
+import { Loading } from "../ui/Loading";
 
 interface SkillsStepProps {
   formData: FormData;
@@ -81,7 +82,7 @@ export function SkillsStep({
     (async () => {
       try {
         setLoadingServerSkills(true);
-        const server = await listCvSkills(); // [{ id, level, skill:{name,version} }]
+        const server = await listCvSkills();
         const serverAsForm: SkillItem[] = server.map(s => ({
           name: s.skill.name,
           version: s.skill.version || undefined,
@@ -106,20 +107,16 @@ export function SkillsStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // ----------------- Technologies Context -----------------
-  const { mapByName /* loading, refresh */ } = useTechnologiesContext();
+  
+  const { mapByName } = useTechnologiesContext();
 
-  // Lista de nombres disponibles (popular skills) proveniente del contexto
   const popularSkills: string[] = useMemo(() => Object.keys(mapByName ?? {}), [mapByName]);
 
-  // Acceso a categoría y color desde el mapa del contexto
   const getSkillCategory = (skillName: string): { category: string; color: string } | null => {
     const info = mapByName?.[skillName];
     if (!info) return null;
     return { category: info.category, color: info.color || "" };
   };
-
-  // --------------------------------------------------------
 
   const skillLevels = [
     { id: "bajo",  name: "Básico",     emoji: "🌱", description: "Conceptos fundamentales claros", professional: "Básico",     color: "from-green-400 to-emerald-500", bgColor: "bg-green-50",  textColor: "text-green-700" },
@@ -235,17 +232,14 @@ export function SkillsStep({
   const addSkillFromPanel = async () => {
     if (!selectedTechnology || !tempSkillLevel) return;
   
-    // Normaliza versión: "" -> undefined (tu backend normaliza a "")
     const versionNorm = (tempSkillVersion || '').trim() || undefined;
   
-    // 1) Evita duplicados en la UI: si existe misma (name, version), actualiza level
     const skills = (formData.skills || []) as SkillItem[];
     const existingIdx = skills.findIndex(
       s => s.name.trim().toLowerCase() === selectedTechnology.trim().toLowerCase()
         && (s.version || '') === (versionNorm || '')
     );
   
-    // 2) Construye objeto local (optimista)
     const optimistic: SkillItem = {
       name: selectedTechnology,
       level: tempSkillLevel,
@@ -260,7 +254,6 @@ export function SkillsStep({
     try {
       setAddingSkill(true);
   
-      // 3) Optimistic UI
       if (existingIdx >= 0) {
         rollback = { type: 'replace', index: existingIdx, prev: skills[existingIdx] };
         const next = [...skills];
@@ -271,14 +264,12 @@ export function SkillsStep({
         updateFormData('skills', [...skills, optimistic]);
       }
   
-      // 4) Persistencia real en el backend (idempotente por (cvId, skillId))
       await addCvSkill({
         name: selectedTechnology.trim(),
         version: versionNorm,
         level: tempSkillLevel,
       });
   
-      // 5) UX positiva (tu lógica existente)
       addProgress(5);
       setStreakCounter(prev => ({ ...prev, skills: prev.skills + 1 }));
   
@@ -399,6 +390,7 @@ export function SkillsStep({
 
   return (
     <div className="space-y-8">
+      {loadingServerSkills && <Loading show fullscreen label="Cargando información..." size="lg" />}
       <AnimatePresence>
         {contextualMessage && (
           <motion.div
