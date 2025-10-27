@@ -92,7 +92,7 @@ const TABS = [
 export default function TechnologiesAdmin() {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = !!user && (user as any)?.role === "ADMIN";
-  const [active, setActive] = useState<string>('suggestions');
+  const [active, setActive] = useState<string>('dashboard');
 
   // 👉 Fuente de datos global via Provider
   const { items: globalItems, loading: ctxLoading, refresh } = useTechnologiesContext();

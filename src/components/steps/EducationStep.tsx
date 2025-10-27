@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -26,6 +26,15 @@ import type {
   AddMotivationalMessage,
   StreakCounter
 } from "../../types/app";
+import { certificationMessages, certificationMilestones, educationMessages, educationMilestones } from "@/constants";
+import { 
+  getEducation, 
+  createEducation 
+} from "@/api/education";
+import { 
+  getCertifications, 
+  createCertification 
+} from "@/api/certifications";
 
 type EducationItem = NonNullable<FormData["education"]>[number];
 type CertificationItem = NonNullable<FormData["certifications"]>[number];
@@ -45,11 +54,15 @@ export function EducationStep({
   addProgress,
   addMotivationalMessage,
   setStreakCounter
-}: EducationStepProps) {
+}: Readonly<EducationStepProps>) {
   const [showEducationForm, setShowEducationForm] = useState<boolean>(false);
   const [showCertForm, setShowCertForm] = useState<boolean>(false);
   const [contextualMessage, setContextualMessage] = useState<string | null>(null);
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [savingEdu, setSavingEdu] = useState<boolean>(false);
+  const [savingCert, setSavingCert] = useState<boolean>(false);
 
   const [currentEducation, setCurrentEducation] = useState<EducationItem>({
     institution: "",
@@ -69,54 +82,36 @@ export function EducationStep({
     credentialId: ""
   });
 
-  // Mensajes dinámicos para educación
-  const educationMessages: string[] = [
-    "¡Knowledge is power activado! 🧠",
-    "¡Tu formación académica destaca! 🌟",
-    "¡Bases sólidas documentadas! 🏛️",
-    "¡Inversión en conocimiento registrada! 💡",
-    "¡Tu background académico brilla! ✨",
-    "¡Fundamentos técnicos confirmados! 🎯",
-    "¡Educación de calidad verificada! ✅",
-    "¡Tu preparación académica impresiona! 📚",
-    "¡Conocimiento estructurado añadido! 🔧",
-    "¡Formación técnica level up! 📈",
-    "¡Tu expertise tiene raíces profundas! 🌳",
-    "¡Background académico sobresaliente! 🏆",
-    "¡Credenciales educativas desbloqueadas! 🔓",
-    "¡Tu preparación es tu superpoder! ⚡",
-    "¡Fundación académica rock solid! 🗿"
-  ];
-
-  // Mensajes dinámicos para certificaciones
-  const certificationMessages: string[] = [
-    "¡Credencial técnica desbloqueada! 🏅",
-    "¡Tu expertise está certificada! ✅",
-    "¡Skills oficialmente validados! 🎖️",
-    "¡Certificación de élite añadida! 👑",
-    "¡Tu conocimiento tiene respaldo oficial! 📜",
-    "¡Competencias técnicas verificadas! 🔍",
-    "¡Badge profesional conseguido! 🏆",
-    "¡Tu expertise ahora es incuestionable! 💪",
-    "¡Credencial industry-standard! 🌟",
-    "¡Certificación que abre puertas! 🚪",
-    "¡Tu perfil gana credibilidad! 📈",
-    "¡Skills certificados = Skills confiables! 🤝",
-    "¡Validation técnica completada! ✨",
-    "¡Tu conocimiento tiene sello de calidad! 🎯",
-    "¡Certificación que habla por ti! 💬"
-  ];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setIsLoading(true);
+      setErrorMsg(null);
+      try {
+        const [edu, certs] = await Promise.all([
+          getEducation(),
+          getCertifications()
+        ]);
+        if (!mounted) return;
+        updateFormData("education", edu as any);
+        updateFormData("certifications", certs as any);
+      } catch (err: any) {
+        if (!mounted) return;
+        setErrorMsg(err?.message || "Error cargando datos académicos");
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const showContextualSuccess = (message: string) => {
     setContextualMessage(message);
-    setTimeout(() => {
-      setContextualMessage(null);
-    }, 3000);
+    setTimeout(() => setContextualMessage(null), 3000);
   };
 
   const validateYear = (year: string): { isValid: boolean; message: string | null } => {
     if (!year) return { isValid: true, message: null }
-
     if (year.length !== 4) {
       return { isValid: false, message: "📅 El año debe tener exactamente 4 dígitos" };
     }
@@ -160,50 +155,52 @@ export function EducationStep({
 
   const isYearFieldEnabled = (): boolean => currentEducation.status !== "";
 
-  const addEducation = (): void => {
+
+  const addEducation = async (): Promise<void> => {
     if (!isEducationFormValid()) return;
+    setSavingEdu(true);
+    setErrorMsg(null);
+    try {
+      const created = await createEducation(currentEducation as any);
 
-    const education = formData.education ?? [];
-    updateFormData("education", [...education, currentEducation]);
+      const education = formData.education ?? [];
+      updateFormData("education", [...education, created] as any);
 
-    setCurrentEducation({
-      institution: "",
-      degree: "",
-      field: "",
-      year: "",
-      achievements: "",
-      status: "" as EducationItem["status"],
-      isInternational: false as EducationItem["isInternational"],
-      hasApostille: false as EducationItem["hasApostille"]
-    });
-    setShowEducationForm(false);
+      setCurrentEducation({
+        institution: "",
+        degree: "",
+        field: "",
+        year: "",
+        achievements: "",
+        status: "" as EducationItem["status"],
+        isInternational: false as EducationItem["isInternational"],
+        hasApostille: false as EducationItem["hasApostille"]
+      });
+      setShowEducationForm(false);
 
-    setStreakCounter(prev => ({ ...prev, education: prev.education + 1 }));
 
-    const educationMilestones: Record<number, string[]> = {
-      1: ["¡Fundación académica establecida! 🏛️", "¡Tu preparación formal brilla! ✨", "¡Base de conocimiento sólida! 🧠"],
-      2: ["¡Formación académica diversa! 📚", "¡Tu preparación es excepcional! 🌟", "¡Background educativo impresionante! 🎓"],
-      3: ["¡Académicamente sobresaliente! 👑", "¡Tu formación es tu superpoder! ⚡", "¡Education level: Expert! 🏆"]
-    };
-
-    const eduCount = education.length + 1;
-    if (educationMilestones[eduCount]) {
-      const randomMilestone = educationMilestones[eduCount][Math.floor(Math.random() * educationMilestones[eduCount].length)];
-      addProgress(8, randomMilestone);
-    } else {
-      addProgress(8);
+      setStreakCounter(prev => ({ ...prev, education: prev.education + 1 }));
+      const eduCount = education.length + 1;
+      if (educationMilestones[eduCount]) {
+        const randomMilestone = educationMilestones[eduCount][Math.floor(Math.random() * educationMilestones[eduCount].length)];
+        addProgress(8, randomMilestone);
+      } else {
+        addProgress(8);
+      }
+      const randomMessage = educationMessages[Math.floor(Math.random() * educationMessages.length)];
+      addMotivationalMessage(
+        "education",
+        randomMessage,
+        `${currentEducation.degree} en ${currentEducation.institution} - ¡Excelente preparación!`,
+        "🎓",
+        `Graduado en ${currentEducation.year || "fecha por especificar"}`
+      );
+      showContextualSuccess(`🎓 Formación en ${currentEducation.institution} agregada exitosamente!`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Error guardando formación");
+    } finally {
+      setSavingEdu(false);
     }
-
-    const randomMessage = educationMessages[Math.floor(Math.random() * educationMessages.length)];
-    addMotivationalMessage(
-      "education",
-      randomMessage,
-      `${currentEducation.degree} en ${currentEducation.institution} - ¡Excelente preparación!`,
-      "🎓",
-      `Graduado en ${currentEducation.year || "fecha por especificar"}`
-    );
-
-    showContextualSuccess(`🎓 Formación en ${currentEducation.institution} agregada exitosamente!`);
   };
 
   const isCertificationFormValid = (): boolean => {
@@ -215,55 +212,57 @@ export function EducationStep({
     return true;
   };
 
-  const addCertification = (): void => {
+  const addCertification = async (): Promise<void> => {
     if (!isCertificationFormValid()) return;
+    setSavingCert(true);
+    setErrorMsg(null);
+    try {
+      const created = await createCertification(currentCert as any);
 
-    const certifications = formData.certifications ?? [];
-    updateFormData("certifications", [...certifications, currentCert]);
+      const certifications = formData.certifications ?? [];
+      updateFormData("certifications", [...certifications, created] as any);
 
-    setCurrentCert({ name: "", issuer: "", year: "", credentialId: "" });
-    setShowCertForm(false);
+      // resetea form
+      setCurrentCert({ name: "", issuer: "", year: "", credentialId: "" });
+      setShowCertForm(false);
 
-    setStreakCounter(prev => ({ ...prev, certifications: prev.certifications + 1 }));
+      // UX gamificada
+      setStreakCounter(prev => ({ ...prev, certifications: prev.certifications + 1 }));
 
-    const certificationMilestones: Record<number, string[]> = {
-      1: ["¡Primera certificación desbloqueada! 🏅", "¡Tu expertise está validada! ✅", "¡Credencial técnica conseguida! 🎖️"],
-      3: ["¡Portfolio de certificaciones sólido! 💪", "¡Tus skills están bien respaldados! 🛡️", "¡Certificaciones de peso! ⚖️"],
-      5: ["¡Eres una máquina de certificaciones! 🤖", "¡Validation master achieved! 🏆", "¡Tu expertise es incuestionable! 👑"],
-      10: ["¡Certificación collector achieved! 🏆", "¡Eres un experto certificado en todo! 🌟", "¡Tu credibilidad es infinita! ♾️"]
-    };
-
-    const certCount = certifications.length + 1;
-    if (certificationMilestones[certCount]) {
-      const randomMilestone = certificationMilestones[certCount][Math.floor(Math.random() * certificationMilestones[certCount].length)];
-      addProgress(10, randomMilestone);
-    } else {
-      addProgress(10);
+      const certCount = certifications.length + 1;
+      if (certificationMilestones[certCount]) {
+        const randomMilestone = certificationMilestones[certCount][Math.floor(Math.random() * certificationMilestones[certCount].length)];
+        addProgress(10, randomMilestone);
+      } else {
+        addProgress(10);
+      }
+      const randomMessage = certificationMessages[Math.floor(Math.random() * certificationMessages.length)];
+      addMotivationalMessage(
+        "certification",
+        randomMessage,
+        `${currentCert.name} de ${currentCert.issuer} - ¡Tu expertise está validada!`,
+        "🏆",
+        `Certificado en ${currentCert.year || "fecha por especificar"}`
+      );
+      showContextualSuccess(`🏆 Certificación ${currentCert.name} agregada exitosamente!`);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Error guardando certificación");
+    } finally {
+      setSavingCert(false);
     }
-
-    const randomMessage = certificationMessages[Math.floor(Math.random() * certificationMessages.length)];
-    addMotivationalMessage(
-      "certification",
-      randomMessage,
-      `${currentCert.name} de ${currentCert.issuer} - ¡Tu expertise está validada!`,
-      "🏆",
-      `Certificado en ${currentCert.year || "fecha por especificar"}`
-    );
-
-    showContextualSuccess(`🏆 Certificación ${currentCert.name} agregada exitosamente!`);
   };
 
   const createTimelineData = () => {
     const education = (formData.education ?? []).map((edu: EducationItem) => ({
       ...edu,
       type: "education" as const,
-      sortYear: parseInt(edu.year as string, 10) || 0
+      sortYear: parseInt(edu.year || "", 10) || 0
     }));
 
     const certifications = (formData.certifications ?? []).map((cert: CertificationItem) => ({
       ...cert,
       type: "certification" as const,
-      sortYear: parseInt(cert.year as string, 10) || 0
+      sortYear: parseInt(cert.year || "", 10) || 0
     }));
 
     const completedEducation = education.filter(item => item.status === "terminado" && item.sortYear > 0);
@@ -284,6 +283,16 @@ export function EducationStep({
 
   return (
     <div className="space-y-8">
+      {/* Loading / Error */}
+      {isLoading && (
+        <div className="text-sm text-gray-500">Cargando educación y certificaciones...</div>
+      )}
+      {errorMsg && (
+        <div className="text-sm text-red-600 border border-red-200 bg-red-50 p-2 rounded">
+          {errorMsg}
+        </div>
+      )}
+
       <AnimatePresence>
         {contextualMessage && (
           <motion.div
@@ -441,7 +450,6 @@ export function EducationStep({
           <div className="space-y-4">
             {timelineData.inProgress.map((item, index) => (
               <motion.div
-                key={`inprogress-${index}`}
                 initial={{ opacity: 0, x: -30 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -590,7 +598,7 @@ export function EducationStep({
                     />
                   </div>
                   
-                  {/* REORDENADO: Estado del estudio va ANTES que año */}
+                  {/* Estado antes que año */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <Label>Estado del estudio 📊 *</Label>
@@ -599,7 +607,6 @@ export function EducationStep({
                         onValueChange={(value) => setCurrentEducation(prev => ({ 
                           ...prev, 
                           status: value as EducationItem["status"],
-                          // Limpiar campos de validación internacional si no es terminado
                           isInternational: (value as EducationItem["status"]) === 'terminado' ? prev.isInternational : false,
                           hasApostille: (value as EducationItem["status"]) === 'terminado' ? prev.hasApostille : false
                         }))}
@@ -634,7 +641,6 @@ export function EducationStep({
                             : (() => {
                                 const yearValidation = validateYear((currentEducation.year as string) || "");
                                 const isTerminadoWithoutYear = currentEducation.status === 'terminado' && !currentEducation.year;
-                                
                                 if (!yearValidation.isValid || isTerminadoWithoutYear) {
                                   return 'border-red-300 focus:border-red-500';
                                 }
@@ -649,45 +655,18 @@ export function EducationStep({
                       )}
                       {isYearFieldEnabled() && (() => {
                         const yearValidation = validateYear((currentEducation.year as string) || "");
-                        
-                        // Mostrar error de validación de formato
                         if (currentEducation.year && !yearValidation.isValid) {
-                          return (
-                            <p className="text-xs text-red-600 mt-1">
-                              {yearValidation.message}
-                            </p>
-                          );
+                          return <p className="text-xs text-red-600 mt-1">{yearValidation.message}</p>;
                         }
-                        
-                        // Mostrar requerimiento para terminado
                         if (currentEducation.status === 'terminado' && !currentEducation.year) {
-                          return (
-                            <p className="text-xs text-red-600 mt-1">
-                              📅 Año requerido para estudios terminados
-                            </p>
-                          );
+                          return <p className="text-xs text-red-600 mt-1">📅 Año requerido para estudios terminados</p>;
                         }
-                        
-                        // Mostrar info para estados opcionales
                         if ((currentEducation.status === 'en-curso' || currentEducation.status === 'incompleto') && !currentEducation.year) {
-                          return (
-                            <p className="text-xs text-gray-500 mt-1">
-                              ℹ️ Año opcional para estudios {
-                                currentEducation.status === 'en-curso' ? 'en curso' : 'incompletos'
-                              } (formato: YYYY)
-                            </p>
-                          );
+                          return <p className="text-xs text-gray-500 mt-1">ℹ️ Año opcional para estudios {currentEducation.status === 'en-curso' ? 'en curso' : 'incompletos'} (formato: YYYY)</p>;
                         }
-                        
-                        // Mostrar info de formato cuando está escribiendo
                         if (currentEducation.year && (currentEducation.year as string).length > 0 && (currentEducation.year as string).length < 4) {
-                          return (
-                            <p className="text-xs text-blue-600 mt-1">
-                              📝 Formato: año completo de 4 dígitos (ej: 2024)
-                            </p>
-                          );
+                          return <p className="text-xs text-blue-600 mt-1">📝 Formato: año completo de 4 dígitos (ej: 2024)</p>;
                         }
-                        
                         return null;
                       })()}
                     </div>
@@ -704,7 +683,7 @@ export function EducationStep({
                     />
                   </div>
                   
-                  {/* Validación de estudios extranjeros - Solo para estudios terminados */}
+                  {/* Validación internacional */}
                   {currentEducation.status === 'terminado' && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
@@ -783,15 +762,16 @@ export function EducationStep({
                     onClick={() => setShowEducationForm(false)} 
                     variant="outline" 
                     className="flex-1 bg-white border-gray-300 hover:bg-gray-50"
+                    disabled={savingEdu}
                   >
                     Cancelar
                   </Button>
                   <Button
                     onClick={addEducation}
-                    disabled={!isEducationFormValid()}
+                    disabled={!isEducationFormValid() || savingEdu}
                     className="flex-1 bg-gradient-to-r from-[var(--axity-mint)] to-[var(--axity-mint)] hover:from-emerald-500 hover:to-teal-600 text-white"
                   >
-                    Guardar 📚
+                    {savingEdu ? "Guardando..." : "Guardar 📚"}
                   </Button>
                 </div>
               </div>
@@ -872,34 +852,15 @@ export function EducationStep({
                       />
                       {(() => {
                         const yearValidation = validateYear((currentCert.year as string) || "");
-                        
-                        // Mostrar error de validación de formato
                         if (currentCert.year && !yearValidation.isValid) {
-                          return (
-                            <p className="text-xs text-red-600 mt-1">
-                              {yearValidation.message}
-                            </p>
-                          );
+                          return <p className="text-xs text-red-600 mt-1">{yearValidation.message}</p>;
                         }
-                        
-                        // Mostrar info de formato cuando está escribiendo
                         if (currentCert.year && (currentCert.year as string).length > 0 && (currentCert.year as string).length < 4) {
-                          return (
-                            <p className="text-xs text-blue-600 mt-1">
-                              📝 Formato: año completo de 4 dígitos (ej: 2024)
-                            </p>
-                          );
+                          return <p className="text-xs text-blue-600 mt-1">📝 Formato: año completo de 4 dígitos (ej: 2024)</p>;
                         }
-                        
-                        // Mostrar ayuda cuando está vacío
                         if (!currentCert.year) {
-                          return (
-                            <p className="text-xs text-gray-500 mt-1">
-                              ℹ️ Año de obtención de la certificación (formato: YYYY)
-                            </p>
-                          );
+                          return <p className="text-xs text-gray-500 mt-1">ℹ️ Año de obtención de la certificación (formato: YYYY)</p>;
                         }
-                        
                         return null;
                       })()}
                     </div>
@@ -920,15 +881,16 @@ export function EducationStep({
                     onClick={() => setShowCertForm(false)} 
                     variant="outline" 
                     className="flex-1 bg-white border-gray-300 hover:bg-gray-50"
+                    disabled={savingCert}
                   >
                     Cancelar
                   </Button>
                   <Button
                     onClick={addCertification}
-                    disabled={!isCertificationFormValid()}
+                    disabled={!isCertificationFormValid() || savingCert}
                     className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-300 hover:to-yellow-400 text-white"
                   >
-                    Guardar 🏆
+                    {savingCert ? "Guardando..." : "Guardar 🏆"}
                   </Button>
                 </div>
               </div>

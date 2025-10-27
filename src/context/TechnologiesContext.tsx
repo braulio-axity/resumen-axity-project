@@ -33,18 +33,16 @@ export const TechnologiesProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (Array.isArray(parsed.items)) {
           setItems(parsed.items);
         }
+      } else {
+        return void refresh();
       }
     } catch {
-        /* ignore */
+      /* ignore */
     } finally {
-        /* ignore */    
+      /* ignore */
     }
-  }, []);
+  }, [localStorage.getItem('token')]);
 
-  useEffect(() => {
-    const checkSession = localStorage.getItem('token');
-    if (checkSession) return void refresh();
-  }, []);
 
   const refresh = async (_opts?: { force?: boolean }) => {
     try {

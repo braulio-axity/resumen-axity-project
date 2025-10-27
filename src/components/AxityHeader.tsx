@@ -56,8 +56,7 @@ export function AxityHeader({
   autoSave,
   onLogout,
   logoSrc,
-}: AxityHeaderProps): ReactElement {
-  // --- Normalizaciones para cumplir con AutoSaveIndicator ---
+}: Readonly<AxityHeaderProps>): ReactElement {
   const normalizedStatus: AutoSaveStatus = (() => {
     const raw = autoSave?.status;
     if (raw === "idle" || raw === "saving" || raw === "saved" || raw === "error") {

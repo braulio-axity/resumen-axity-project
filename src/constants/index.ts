@@ -340,3 +340,54 @@ export const steps = [
     theme: "from-purple-50 to-pink-50",
   },
 ];
+
+// Mensajes dinámicos para educación
+export const educationMessages: string[] = [
+  "¡Knowledge is power activado! 🧠",
+  "¡Tu formación académica destaca! 🌟",
+  "¡Bases sólidas documentadas! 🏛️",
+  "¡Inversión en conocimiento registrada! 💡",
+  "¡Tu background académico brilla! ✨",
+  "¡Fundamentos técnicos confirmados! 🎯",
+  "¡Educación de calidad verificada! ✅",
+  "¡Tu preparación académica impresiona! 📚",
+  "¡Conocimiento estructurado añadido! 🔧",
+  "¡Formación técnica level up! 📈",
+  "¡Tu expertise tiene raíces profundas! 🌳",
+  "¡Background académico sobresaliente! 🏆",
+  "¡Credenciales educativas desbloqueadas! 🔓",
+  "¡Tu preparación es tu superpoder! ⚡",
+  "¡Fundación académica rock solid! 🗿"
+];
+
+// Mensajes dinámicos para certificaciones
+export const certificationMessages: string[] = [
+  "¡Credencial técnica desbloqueada! 🏅",
+  "¡Tu expertise está certificada! ✅",
+  "¡Skills oficialmente validados! 🎖️",
+  "¡Certificación de élite añadida! 👑",
+  "¡Tu conocimiento tiene respaldo oficial! 📜",
+  "¡Competencias técnicas verificadas! 🔍",
+  "¡Badge profesional conseguido! 🏆",
+  "¡Tu expertise ahora es incuestionable! 💪",
+  "¡Credencial industry-standard! 🌟",
+  "¡Certificación que abre puertas! 🚪",
+  "¡Tu perfil gana credibilidad! 📈",
+  "¡Skills certificados = Skills confiables! 🤝",
+  "¡Validation técnica completada! ✨",
+  "¡Tu conocimiento tiene sello de calidad! 🎯",
+  "¡Certificación que habla por ti! 💬"
+];
+
+export const educationMilestones: Record<number, string[]> = {
+  1: ["¡Fundación académica establecida! 🏛️", "¡Tu preparación formal brilla! ✨", "¡Base de conocimiento sólida! 🧠"],
+  2: ["¡Formación académica diversa! 📚", "¡Tu preparación es excepcional! 🌟", "¡Background educativo impresionante! 🎓"],
+  3: ["¡Académicamente sobresaliente! 👑", "¡Tu formación es tu superpoder! ⚡", "¡Education level: Expert! 🏆"]
+};
+
+export const certificationMilestones: Record<number, string[]> = {
+  1: ["¡Primera certificación desbloqueada! 🏅", "¡Tu expertise está validada! ✅", "¡Credencial técnica conseguida! 🎖️"],
+  3: ["¡Portfolio de certificaciones sólido! 💪", "¡Tus skills están bien respaldados! 🛡️", "¡Certificaciones de peso! ⚖️"],
+  5: ["¡Eres una máquina de certificaciones! 🤖", "¡Validation master achieved! 🏆", "¡Tu expertise es incuestionable! 👑"],
+  10: ["¡Certificación collector achieved! 🏆", "¡Eres un experto certificado en todo! 🌟", "¡Tu credibilidad es infinita! ♾️"]
+};

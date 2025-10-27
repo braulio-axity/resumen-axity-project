@@ -58,7 +58,7 @@ export function SlidePanelExperience({
   addProgress,
   addMotivationalMessage,
   setStreakCounter
-}: ExperienceStepProps) {
+}: Readonly<ExperienceStepProps>) {
   const [showSlidePanel, setShowSlidePanel] = useState(false)
   const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({})
   const [activeStep, setActiveStep] = useState(0)
@@ -669,19 +669,17 @@ export function SlidePanelExperience({
 
                   return (
                     <div key={step.id} className="flex flex-col items-center gap-2 relative">
-                      {/* Línea conectora - antes del círculo */}
                       {index > 0 && (
                         <div
                           className={`absolute h-0.5 w-6 sm:w-8 ${index - 1 < activeStep ? 'bg-[var(--axity-mint)]' : 'bg-gray-200'}`}
                           style={{
-                            left: '-18px', // Posiciona la línea a la izquierda del círculo
-                            top: '16px', // Centra verticalmente con el círculo
+                            left: '-18px',
+                            top: '16px',
                             transform: 'translateX(-50%)'
                           }}
                         />
                       )}
 
-                      {/* Círculo del paso */}
                       <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${index === activeStep
                           ? 'bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] text-white shadow-lg'
                           : index < activeStep
@@ -691,7 +689,6 @@ export function SlidePanelExperience({
                         {index < activeStep ? <CheckCircle className="h-4 w-4" /> : index + 1}
                       </div>
 
-                      {/* Título del paso - debajo del círculo */}
                       <div className="text-center min-w-0">
                         <div className={`text-xs font-medium leading-tight whitespace-nowrap ${index === activeStep ? 'text-[var(--axity-purple)]' : 'text-gray-500'}`}>
                           {step.title}
@@ -1014,7 +1011,6 @@ export function SlidePanelExperience({
                               </div>
                             )}
 
-                            {/* Formulario para agregar tecnología - Mejorado */}
                             <div className="space-y-3">
                               <div className="bg-white border-2 border-dashed border-[var(--axity-violet)]/30 rounded-lg p-4">
                                 <div className="flex items-center gap-2 mb-3">
