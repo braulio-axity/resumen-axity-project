@@ -121,7 +121,6 @@ export default function WizardPage() {
     if (stepIndex === 3) return true;
     return false;
   };
-
   const canProceed = () => getStepCompletion(currentStep);
 
   const currentLevelInfo =
@@ -139,7 +138,6 @@ export default function WizardPage() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login", { replace: true });
   };
 
   return (

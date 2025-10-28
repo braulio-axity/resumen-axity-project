@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { listTechnologies } from "@/api/technologies";
 import type { Technology } from "@/types/technology";
+import { useAuth } from "./AuthContext";
 
 type MapByName = Record<string, { category: string; color: string }>;
 
@@ -22,26 +23,27 @@ function buildMap(items: Technology[]): MapByName {
 }
 
 export const TechnologiesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<Technology[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [items, setItems] = useState<Technology[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_KEY);
-      if (raw) {
+      if (raw && isAuthenticated) {
         const parsed = JSON.parse(raw) as { items: Technology[]; ts: number };
         if (Array.isArray(parsed.items)) {
           setItems(parsed.items);
         }
-      } else {
-        return void refresh();
+      } else if (isAuthenticated && !raw) {
+        refresh()
       }
     } catch {
       /* ignore */
     } finally {
       /* ignore */
     }
-  }, [localStorage.getItem('token')]);
+  }, [isAuthenticated]);
 
 
   const refresh = async (_opts?: { force?: boolean }) => {

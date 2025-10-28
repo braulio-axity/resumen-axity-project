@@ -38,7 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Restaurar sesión e hidratar usuario/rol desde el token si hace falta
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
     const storedUserRaw = localStorage.getItem("user");
@@ -46,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedToken) {
       let nextUser: User | null = storedUserRaw ? JSON.parse(storedUserRaw) : null;
 
-      // Si falta info crítica (role/email) la tomamos del JWT (Nest firma: { sub, role, email })
       const payload = decodeJwt<{ email?: string; role?: string }>(storedToken);
       if (!nextUser || !nextUser.role || !nextUser.email) {
         nextUser = {
@@ -79,8 +77,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const data: { access_token: string; user?: User } = await res.json();
 
     localStorage.setItem("token", data.access_token);
-
-    // Preferimos el user del backend; si no viene, usamos el payload del JWT
     let nextUser: User | null = data.user ?? null;
     if (!nextUser) {
       const payload = decodeJwt<{ email?: string; role?: string }>(data.access_token);
