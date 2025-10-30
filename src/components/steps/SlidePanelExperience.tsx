@@ -1,14 +1,20 @@
-import { useEffect, useState } from 'react';
-import { listCvExperiences, createCvExperience, updateCvExperience, deleteCvExperience, type CreateExperiencePayload } from '@/api/cvExperiences';
-import { motion, AnimatePresence } from "motion/react"
-import { Button } from "../ui/button"
-import { Badge } from "../ui/badge"
-import { Card, CardContent, CardHeader } from "../ui/card"
-import { Input } from "../ui/input"
-import { Label } from "../ui/label"
-import { Textarea } from "../ui/textarea"
-import { Checkbox } from "../ui/checkbox"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../ui/sheet"
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import {
+  listCvExperiences,
+  createCvExperience,
+  updateCvExperience,
+  deleteCvExperience,
+  type CreateExperiencePayload,
+} from '@/api/cvExperiences';
+import { motion, AnimatePresence } from 'motion/react';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Card, CardContent, CardHeader } from '../ui/card';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 import {
   Plus,
   Building,
@@ -29,19 +35,20 @@ import {
   X,
   Zap,
   Edit,
-  FolderOpen
-} from "lucide-react"
-import { Separator } from "../ui/separator"
+  FolderOpen,
+} from 'lucide-react';
+import { Separator } from '../ui/separator';
 import type {
   FormData,
   UpdateFormData,
   AddMotivationalMessage,
   StreakCounter,
-} from "./../../types/app"
+} from './../../types/app';
 import { Loading } from '../ui/Loading';
+import { useTechnologiesContext } from "@/context/TechnologiesContext"
 
-type Experience = FormData["experiences"][number]
-type Project = Experience["projects"][number]
+type Experience = FormData['experiences'][number];
+type Project = Experience['projects'][number];
 
 interface ExperienceStepProps {
   formData: FormData;
@@ -57,39 +64,79 @@ export function SlidePanelExperience({
   updateFormData,
   addProgress,
   addMotivationalMessage,
-  setStreakCounter
+  setStreakCounter,
 }: Readonly<ExperienceStepProps>) {
-  const [showSlidePanel, setShowSlidePanel] = useState(false)
-  const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({})
-  const [activeStep, setActiveStep] = useState(0)
-  const [contextualMessage, setContextualMessage] = useState<string | null>(null)
+  const [showSlidePanel, setShowSlidePanel] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({});
+  const [activeStep, setActiveStep] = useState(0);
+  const [contextualMessage, setContextualMessage] = useState<string | null>(null);
 
   const [currentExp, setCurrentExp] = useState<Experience>({
-    company: "",
-    position: "",
-    startDate: "",
-    endDate: "",
+    company: '',
+    position: '',
+    startDate: '',
+    endDate: '',
     current: false,
-    challenges: "",
-    achievements: "",
+    challenges: '',
+    achievements: '',
     technologies: [],
-    projects: []
-  })
+    projects: [],
+  });
 
   const [currentProject, setCurrentProject] = useState<Project>({
-    name: "",
-    role: "",
-    responsibilities: "",
-    technologies: []
-  })
+    name: '',
+    role: '',
+    responsibilities: '',
+    technologies: [],
+  });
 
-  const [showProjectForm, setShowProjectForm] = useState(false)
-  const [newTechName, setNewTechName] = useState("")
-  const [newTechVersion, setNewTechVersion] = useState("")
-  const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null)
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [newTechName, setNewTechName] = useState('');
+  const [newTechVersion, setNewTechVersion] = useState('');
+  const [editingExperienceIndex, setEditingExperienceIndex] = useState<number | null>(null);
 
-  const [loadingServerExp, setLoadingServerExp] = useState(false)
-  const [savingExp, setSavingExp] = useState(false)
+  const [loadingServerExp, setLoadingServerExp] = useState(false);
+  const [savingExp, setSavingExp] = useState(false);
+
+  const { items: techItems, mapByName } = useTechnologiesContext()
+
+  const techCatalog = useMemo(() => {
+    const dict: Record<string, string> = {};
+    for (const t of techItems) {
+      const key = t.name.trim().toLowerCase();
+      if (!dict[key]) dict[key] = t.name.trim();
+    }
+    return Object.values(dict).sort((a, b) => a.localeCompare(b));
+  }, [techItems]);
+  
+  // Resuelve el nombre canónico del catálogo (respeta capitalización original)
+  const resolveCanonicalName = (input: string): string | null => {
+    const k = input.trim().toLowerCase();
+    for (const name of Object.keys(mapByName)) {
+      if (name.toLowerCase() === k) return name; // ← nombre tal como viene del contexto
+    }
+    return null;
+  };
+  
+  // Agrega tecnología al proyecto SIN duplicar, solo si existe en catálogo
+  const addTechFromCatalog = (inputName: string, version?: string) => {
+    const canonical = resolveCanonicalName(inputName);
+    if (!canonical) {
+      // feedback suave: no existe en catálogo (evitamos crear duplicados fuera del contexto)
+      setContextualMessage(`La tecnología "${inputName}" no está en tu catálogo. Refresca o agrégala en el Paso 1.`);
+      setTimeout(() => setContextualMessage(null), 3000);
+      return;
+    }
+    const exists = currentProject.technologies.some(
+      (t) => t.name.trim().toLowerCase() === canonical.toLowerCase()
+    );
+    if (!exists) {
+      setCurrentProject((prev) => ({
+        ...prev,
+        technologies: [...prev.technologies, { name: canonical, version: version?.trim() || undefined }],
+      }));
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -107,38 +154,38 @@ export function SlidePanelExperience({
   const experienceSteps = [
     {
       id: 0,
-      title: "Básico",
+      title: 'Básico',
       icon: Building,
-      description: "Empresa, cargo y fechas",
-      color: "from-blue-400 to-purple-500"
+      description: 'Empresa, cargo y fechas',
+      color: 'from-blue-400 to-purple-500',
     },
     {
       id: 1,
-      title: "Proyectos",
+      title: 'Proyectos',
       icon: Code2,
-      description: "Obligatorio - Al menos uno",
-      color: "from-green-400 to-blue-500"
+      description: 'Obligatorio - Al menos uno',
+      color: 'from-green-400 to-blue-500',
     },
     {
       id: 2,
-      title: "Logros",
+      title: 'Logros',
       icon: Trophy,
-      description: "Impacto y desafíos",
-      color: "from-yellow-400 to-orange-500"
-    }
-  ]
+      description: 'Impacto y desafíos',
+      color: 'from-yellow-400 to-orange-500',
+    },
+  ];
 
   const showContextualSuccess = (message: string) => {
     setContextualMessage(message);
     setTimeout(() => setContextualMessage(null), 3000);
-  }
+  };
 
   const toggleExpanded = (index: number) => {
-    setExpandedCards(prev => ({ ...prev, [index]: !prev[index] }));
-  }
+    setExpandedCards((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const getDuration = (startDate: string, endDate: string, current: boolean) => {
-    if (!startDate) return "";
+    if (!startDate) return '';
     const start = new Date(startDate);
     const end = current ? new Date() : new Date(endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
@@ -152,34 +199,43 @@ export function SlidePanelExperience({
         : `${years} año${years > 1 ? 's' : ''}`;
     }
     return `${months} mes${months > 1 ? 'es' : ''}`;
-  }
+  };
 
-  // Ordenar experiencias (reciente primero)
   const sortExperiencesByDate = (experiences: Experience[]) => {
     return [...experiences].sort((a, b) => {
       if (a.current && !b.current) return -1;
       if (!a.current && b.current) return 1;
       return new Date(b.startDate).getTime() - new Date(a.startDate).getTime();
     });
-  }
+  };
 
-  const addExperience = async () => {
-    if (!currentExp.company || !currentExp.position || !currentExp.startDate) return;
-
-    const normalize = (e: Experience): CreateExperiencePayload => ({
+  const normalizeExperience = useCallback((e: Experience): CreateExperiencePayload => {
+    return {
       company: e.company.trim(),
       position: e.position.trim(),
-      startDate: e.startDate,             // "YYYY-MM"
-      endDate: e.current ? '' : (e.endDate || ''), // "" si current true
+      startDate: e.startDate,
+      endDate: e.current ? '' : e.endDate || '',
       current: !!e.current,
       challenges: e.challenges ?? '',
       achievements: e.achievements ?? '',
-      technologies: (e.technologies || []).map(t => ({ name: t.name, version: t.version || undefined })),
-      projects: (e.projects || []).map(p => ({
-        name: p.name, role: p.role, responsibilities: p.responsibilities,
-        technologies: (p.technologies || []).map(t => ({ name: t.name, version: t.version || undefined })),
+      technologies: (e.technologies || []).map((t) => ({
+        name: t.name,
+        version: t.version || undefined,
       })),
-    });
+      projects: (e.projects || []).map((p) => ({
+        name: p.name,
+        role: p.role,
+        responsibilities: p.responsibilities,
+        technologies: (p.technologies || []).map((t) => ({
+          name: t.name,
+          version: t.version || undefined,
+        })),
+      })),
+    };
+  }, []);
+
+  const addExperience = async () => {
+    if (!currentExp.company || !currentExp.position || !currentExp.startDate) return;
 
     const experiences = formData.experiences || [];
     let rollback: null | { type: 'replace' | 'remove'; index: number; prev?: Experience } = null;
@@ -188,29 +244,36 @@ export function SlidePanelExperience({
       setSavingExp(true);
 
       if (editingExperienceIndex !== null) {
-        // Optimistic replace
-        rollback = { type: 'replace', index: editingExperienceIndex, prev: experiences[editingExperienceIndex] };
+        rollback = {
+          type: 'replace',
+          index: editingExperienceIndex,
+          prev: experiences[editingExperienceIndex],
+        };
         const next = [...experiences];
         next[editingExperienceIndex] = currentExp;
         updateFormData('experiences', next);
 
         const serverId = (rollback.prev as any)?.id;
         if (serverId) {
-          await updateCvExperience(serverId, normalize(currentExp));
+          await updateCvExperience(serverId, normalizeExperience(currentExp));
         } else {
-          await createCvExperience(normalize(currentExp));
+          await createCvExperience(normalizeExperience(currentExp));
         }
 
-        addMotivationalMessage('experience', '¡Experiencia actualizada exitosamente! ✏️', `${currentExp.position} en ${currentExp.company} ha sido modificada`, '📝');
+        addMotivationalMessage(
+          'experience',
+          '¡Experiencia actualizada exitosamente! ✏️',
+          `${currentExp.position} en ${currentExp.company} ha sido modificada`,
+          '📝'
+        );
         showContextualSuccess(`✏️ Tu experiencia en ${currentExp.company} ha sido actualizada!`);
       } else {
-        // Optimistic append
         rollback = { type: 'remove', index: experiences.length };
         updateFormData('experiences', [...experiences, currentExp]);
 
-        await createCvExperience(normalize(currentExp));
+        await createCvExperience(normalizeExperience(currentExp));
 
-        setStreakCounter(prev => ({ ...prev, experiences: prev.experiences + 1 }));
+        setStreakCounter((prev) => ({ ...prev, experiences: prev.experiences + 1 }));
         const expCount = experiences.length + 1;
         const milestones: Record<number, string> = {
           1: '¡Primera experiencia documentada! 📖',
@@ -218,21 +281,32 @@ export function SlidePanelExperience({
           5: '¡Portfolio profesional épico! 🎯',
         };
         if (milestones[expCount]) addProgress(15, milestones[expCount]);
-        addMotivationalMessage('experience', '¡Experiencia agregada exitosamente! 🎉', `${currentExp.position} en ${currentExp.company} ahora es parte de tu trayectoria`, '💼');
+        addMotivationalMessage(
+          'experience',
+          '¡Experiencia agregada exitosamente! 🎉',
+          `${currentExp.position} en ${currentExp.company} ahora es parte de tu trayectoria`,
+          '💼'
+        );
         showContextualSuccess(`🎯 Tu experiencia en ${currentExp.company} ha sido documentada!`);
         addProgress(20);
       }
 
       // Reset
       setCurrentExp({
-        company: "", position: "", startDate: "", endDate: "", current: false,
-        challenges: "", achievements: "", technologies: [], projects: []
+        company: '',
+        position: '',
+        startDate: '',
+        endDate: '',
+        current: false,
+        challenges: '',
+        achievements: '',
+        technologies: [],
+        projects: [],
       });
       setShowSlidePanel(false);
       setActiveStep(0);
       setEditingExperienceIndex(null);
     } catch (e: any) {
-      // rollback UI
       const cur = (formData.experiences || []) as Experience[];
       if (rollback) {
         if (rollback.type === 'replace' && rollback.prev) {
@@ -245,13 +319,12 @@ export function SlidePanelExperience({
           updateFormData('experiences', next);
         }
       }
-      // feedback
       setContextualMessage(e?.message || 'No pudimos guardar la experiencia. Intenta otra vez.');
       setTimeout(() => setContextualMessage(null), 3000);
     } finally {
       setSavingExp(false);
     }
-  }
+  };
 
   const editExperience = (index: number) => {
     const experience = formData.experiences[index] as Experience;
@@ -259,53 +332,57 @@ export function SlidePanelExperience({
     setEditingExperienceIndex(index);
     setActiveStep(0);
     setShowSlidePanel(true);
-  }
+  };
 
   const deleteExperience = async (index: number) => {
     const experiences = formData.experiences || [];
     const deletedExp = experiences[index] as Experience;
     const next = experiences.filter((_, i) => i !== index);
 
-    // Optimistic
     updateFormData('experiences', next);
 
     try {
       const serverId = (deletedExp as any)?.id;
-      if (serverId) {
-        await deleteCvExperience(serverId);
-      } // si no hay id, sólo era local
-      addMotivationalMessage('experience', 'Experiencia eliminada', `${deletedExp.position} en ${deletedExp.company} ha sido removida`, '🗑️');
+      if (serverId) await deleteCvExperience(serverId);
+      addMotivationalMessage(
+        'experience',
+        'Experiencia eliminada',
+        `${deletedExp.position} en ${deletedExp.company} ha sido removida`,
+        '🗑️'
+      );
       showContextualSuccess(`🗑️ Experiencia en ${deletedExp.company} eliminada`);
     } catch (e: any) {
-      // rollback
       updateFormData('experiences', experiences);
       setContextualMessage(e?.message || 'No pudimos eliminar la experiencia.');
       setTimeout(() => setContextualMessage(null), 3000);
     }
-  }
+  };
 
   const canProceedStep = (): boolean => {
     switch (activeStep) {
-      case 0: return !!(currentExp.company.trim() && currentExp.position.trim() && currentExp.startDate);
-      case 1: return currentExp.projects.length > 0; // al menos un proyecto
-      case 2: return true; // opcional
-      default: return false;
+      case 0:
+        return !!(currentExp.company.trim() && currentExp.position.trim() && currentExp.startDate);
+      case 1:
+        return currentExp.projects.length > 0;
+      case 2:
+        return true;
+      default:
+        return false;
     }
-  }
+  };
 
   const nextStep = () => {
-    if (activeStep < experienceSteps.length - 1) setActiveStep(prev => prev + 1);
-  }
+    if (activeStep < experienceSteps.length - 1) setActiveStep((prev) => prev + 1);
+  };
 
   const prevStep = () => {
-    if (activeStep > 0) setActiveStep(prev => prev - 1);
-  }
+    if (activeStep > 0) setActiveStep((prev) => prev - 1);
+  };
 
   return (
     <div className="space-y-8">
-      {/* Loading */}
-      {loadingServerExp &&  <Loading show fullscreen label="Cargando información..." size="lg" />}
-      {/* Contextual Success Message */}
+      {loadingServerExp && <Loading show fullscreen label="Cargando información..." size="lg" />}
+
       <AnimatePresence>
         {contextualMessage && (
           <motion.div
@@ -328,7 +405,6 @@ export function SlidePanelExperience({
         )}
       </AnimatePresence>
 
-      {/* Header */}
       <div className="text-center">
         {formData.experiences?.length > 0 && (
           <motion.div
@@ -338,18 +414,18 @@ export function SlidePanelExperience({
           >
             <Award className="h-4 w-4 text-[var(--axity-purple)]" />
             <span className="text-sm font-medium text-[var(--axity-purple)]">
-              {formData.experiences.length} experiencia{formData.experiences.length !== 1 ? 's' : ''} documentada{formData.experiences.length !== 1 ? 's' : ''}
+              {formData.experiences.length} experiencia
+              {formData.experiences.length !== 1 ? 's' : ''} documentada
+              {formData.experiences.length !== 1 ? 's' : ''}
             </span>
           </motion.div>
         )}
       </div>
 
-      {/* Timeline de Experiencias */}
       {formData.experiences && formData.experiences.length > 0 && (
         <div className="space-y-6">
           <div className="relative">
-            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--axity-purple)] via-[var(--axity-violet)] to-[var(--axity-orange)]"></div>
-
+            <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[var(--axity-purple)] via-[var(--axity-violet)] to-[var(--axity-orange)]" />
             {sortExperiencesByDate(formData.experiences).map((exp, index) => (
               <motion.div
                 key={index}
@@ -386,7 +462,9 @@ export function SlidePanelExperience({
                             <Building className="h-5 w-5 text-white" />
                           </div>
                           <div>
-                            <h4 className="text-lg font-bold text-[var(--axity-purple)]">{exp.position}</h4>
+                            <h4 className="text-lg font-bold text-[var(--axity-purple)]">
+                              {exp.position}
+                            </h4>
                             <p className="text-[var(--axity-orange)] font-medium">{exp.company}</p>
                           </div>
                         </div>
@@ -394,7 +472,9 @@ export function SlidePanelExperience({
                         <div className="flex items-center gap-4 text-sm text-[var(--axity-gray)]">
                           <div className="flex items-center gap-1">
                             <Calendar className="h-4 w-4" />
-                            <span>{exp.startDate} - {exp.current ? 'Presente' : exp.endDate}</span>
+                            <span>
+                              {exp.startDate} - {exp.current ? 'Presente' : exp.endDate}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="h-4 w-4" />
@@ -403,7 +483,10 @@ export function SlidePanelExperience({
                           {exp.projects && exp.projects.length > 0 && (
                             <div className="flex items-center gap-1">
                               <FolderOpen className="h-4 w-4 text-[var(--axity-violet)]" />
-                              <span>{exp.projects.length} proyecto{exp.projects.length !== 1 ? 's' : ''}</span>
+                              <span>
+                                {exp.projects.length} proyecto
+                                {exp.projects.length !== 1 ? 's' : ''}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -417,7 +500,6 @@ export function SlidePanelExperience({
                           </Badge>
                         )}
 
-                        {/* Botones de acción */}
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             onClick={(e) => {
@@ -455,29 +537,30 @@ export function SlidePanelExperience({
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
-                            title={expandedCards[index] ? "Contraer" : "Ver proyectos"}
+                            title={expandedCards[index] ? 'Contraer' : 'Ver proyectos'}
                           >
-                            {expandedCards[index] ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {expandedCards[index] ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
                     </div>
                   </CardHeader>
 
-                  {/* Contenido expandido - Proyectos */}
                   <AnimatePresence>
                     {expandedCards[index] && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
+                        animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
                         transition={{ duration: 0.3 }}
                         className="overflow-hidden"
                       >
                         <CardContent className="pt-0 pb-6">
                           <Separator className="mb-4" />
-
-                          {/* Proyectos */}
                           {exp.projects && exp.projects.length > 0 ? (
                             <div className="space-y-4">
                               <div className="flex items-center gap-2 mb-4">
@@ -490,7 +573,7 @@ export function SlidePanelExperience({
                               <div className="grid gap-3">
                                 {exp.projects.map((project, projectIndex) => (
                                   <motion.div
-                                    key={projectIndex}
+                                    key={project.id}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: projectIndex * 0.1 }}
@@ -523,7 +606,8 @@ export function SlidePanelExperience({
                                               variant="secondary"
                                               className="text-xs bg-white/70 text-[var(--axity-violet)] border border-[var(--axity-violet)]/20"
                                             >
-                                              {tech.name}{tech.version ? ` v${tech.version}` : ''}
+                                              {tech.name}
+                                              {tech.version ? ` v${tech.version}` : ''}
                                             </Badge>
                                           ))}
                                         </div>
@@ -552,7 +636,6 @@ export function SlidePanelExperience({
                             </div>
                           )}
 
-                          {/* Logros y desafíos si existen */}
                           {(exp.achievements || exp.challenges) && (
                             <div className="mt-6 pt-4 border-t border-gray-200">
                               <div className="grid md:grid-cols-2 gap-4">
@@ -593,22 +676,21 @@ export function SlidePanelExperience({
         </div>
       )}
 
-      {/* Add New Experience Button */}
       <div className="text-center py-8">
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button
             onClick={() => {
               setEditingExperienceIndex(null);
               setCurrentExp({
-                company: "",
-                position: "",
-                startDate: "",
-                endDate: "",
+                company: '',
+                position: '',
+                startDate: '',
+                endDate: '',
                 current: false,
-                challenges: "",
-                achievements: "",
+                challenges: '',
+                achievements: '',
                 technologies: [],
-                projects: []
+                projects: [],
               });
               setActiveStep(0);
               setShowSlidePanel(true);
@@ -617,17 +699,21 @@ export function SlidePanelExperience({
             className="ax-btn-primary bg-axity-gradient-accent text-white shadow-xl px-8 py-4"
           >
             <Plus className="h-6 w-6 mr-3" />
-            {formData.experiences?.length > 0 ? 'Agregar nueva experiencia' : 'Documentar mi primera experiencia'} ✨
+            {formData.experiences?.length > 0
+              ? 'Agregar nueva experiencia'
+              : 'Documentar mi primera experiencia'}{' '}
+            ✨
           </Button>
         </motion.div>
         <p className="text-sm text-[var(--axity-gray)] mt-4">
           Completa tu experiencia desde el panel lateral 👈
         </p>
       </div>
-
-      {/* SLIDING PANEL */}
       <Sheet open={showSlidePanel} onOpenChange={setShowSlidePanel}>
-        <SheetContent side="right" className="w-[calc(100vw-1.5rem)] max-w-none sm:w-[800px] lg:w-[950px] xl:w-[1100px] 2xl:w-[1200px] overflow-y-auto sm:mr-0 mr-3">
+        <SheetContent
+          side="right"
+          className="w-[calc(100vw-1.5rem)] max-w-none sm:w-[800px] lg:w-[950px] xl:w-[1100px] 2xl:w-[1200px] overflow-y-auto sm:mr-0 mr-3"
+        >
           <SheetHeader className="space-y-4 pb-6 px-4 lg:px-6">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-[var(--axity-purple)] to-[var(--axity-violet)] rounded-xl flex items-center justify-center">
@@ -662,35 +748,33 @@ export function SlidePanelExperience({
               </div>
             </div>
 
-            {/* Step Indicators - Layout vertical compacto */}
+            {/* Step Indicators */}
             <div className="flex items-center justify-center px-4">
               <div className="relative flex items-end gap-6 sm:gap-8">
                 {experienceSteps.map((step, index) => {
-
                   return (
                     <div key={step.id} className="flex flex-col items-center gap-2 relative">
                       {index > 0 && (
                         <div
                           className={`absolute h-0.5 w-6 sm:w-8 ${index - 1 < activeStep ? 'bg-[var(--axity-mint)]' : 'bg-gray-200'}`}
-                          style={{
-                            left: '-18px',
-                            top: '16px',
-                            transform: 'translateX(-50%)'
-                          }}
+                          style={{ left: '-18px', top: '16px', transform: 'translateX(-50%)' }}
                         />
                       )}
-
-                      <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${index === activeStep
-                          ? 'bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] text-white shadow-lg'
-                          : index < activeStep
-                            ? 'bg-[var(--axity-mint)] text-white'
-                            : 'bg-gray-200 text-gray-500'
-                        }`}>
+                      <div
+                        className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all relative z-10 ${index === activeStep
+                            ? 'bg-gradient-to-r from-[var(--axity-purple)] to-[var(--axity-violet)] text-white shadow-lg'
+                            : index < activeStep
+                              ? 'bg-[var(--axity-mint)] text-white'
+                              : 'bg-gray-200 text-gray-500'
+                          }`}
+                      >
                         {index < activeStep ? <CheckCircle className="h-4 w-4" /> : index + 1}
                       </div>
-
                       <div className="text-center min-w-0">
-                        <div className={`text-xs font-medium leading-tight whitespace-nowrap ${index === activeStep ? 'text-[var(--axity-purple)]' : 'text-gray-500'}`}>
+                        <div
+                          className={`text-xs font-medium leading-tight whitespace-nowrap ${index === activeStep ? 'text-[var(--axity-purple)]' : 'text-gray-500'
+                            }`}
+                        >
                           {step.title}
                         </div>
                       </div>
@@ -715,15 +799,13 @@ export function SlidePanelExperience({
                 {activeStep === 0 && (
                   <div className="space-y-6">
                     <div className="text-center">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${experienceSteps[activeStep].color} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+                      <div
+                        className={`w-16 h-16 bg-gradient-to-br ${experienceSteps[activeStep].color} rounded-xl flex items-center justify-center mx-auto mb-4`}
+                      >
                         <Building className="h-8 w-8 text-white" />
                       </div>
-                      <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-2">
-                        Información básica de la empresa
-                      </h4>
-                      <p className="text-sm text-[var(--axity-gray)]">
-                        Datos esenciales de tu experiencia laboral
-                      </p>
+                      <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-2">Información básica de la empresa</h4>
+                      <p className="text-sm text-[var(--axity-gray)]">Datos esenciales de tu experiencia laboral</p>
                     </div>
 
                     <div className="space-y-4">
@@ -735,7 +817,7 @@ export function SlidePanelExperience({
                         <Input
                           placeholder="ej. Axity, Microsoft, Google"
                           value={currentExp.company}
-                          onChange={(e) => setCurrentExp(prev => ({ ...prev, company: e.target.value }))}
+                          onChange={(e) => setCurrentExp((prev) => ({ ...prev, company: e.target.value }))}
                           className="bg-blue-50 border-blue-200 focus:border-blue-400"
                         />
                       </div>
@@ -748,7 +830,7 @@ export function SlidePanelExperience({
                         <Input
                           placeholder="ej. Senior Developer, Tech Lead"
                           value={currentExp.position}
-                          onChange={(e) => setCurrentExp(prev => ({ ...prev, position: e.target.value }))}
+                          onChange={(e) => setCurrentExp((prev) => ({ ...prev, position: e.target.value }))}
                           className="bg-purple-50 border-purple-200 focus:border-purple-400"
                         />
                       </div>
@@ -762,7 +844,7 @@ export function SlidePanelExperience({
                           <Input
                             type="month"
                             value={currentExp.startDate}
-                            onChange={(e) => setCurrentExp(prev => ({ ...prev, startDate: e.target.value }))}
+                            onChange={(e) => setCurrentExp((prev) => ({ ...prev, startDate: e.target.value }))}
                             className="bg-orange-50 border-orange-200 focus:border-orange-400"
                           />
                         </div>
@@ -776,7 +858,7 @@ export function SlidePanelExperience({
                             <Input
                               type="month"
                               value={currentExp.endDate}
-                              onChange={(e) => setCurrentExp(prev => ({ ...prev, endDate: e.target.value }))}
+                              onChange={(e) => setCurrentExp((prev) => ({ ...prev, endDate: e.target.value }))}
                               disabled={currentExp.current}
                               className="bg-green-50 border-green-200 focus:border-green-400 disabled:opacity-50"
                             />
@@ -784,11 +866,13 @@ export function SlidePanelExperience({
                               <Checkbox
                                 id="current-panel"
                                 checked={currentExp.current}
-                                onCheckedChange={(checked) => setCurrentExp(prev => ({
-                                  ...prev,
-                                  current: !!checked,
-                                  endDate: checked ? "" : prev.endDate
-                                }))}
+                                onCheckedChange={(checked) =>
+                                  setCurrentExp((prev) => ({
+                                    ...prev,
+                                    current: !!checked,
+                                    endDate: checked ? '' : prev.endDate,
+                                  }))
+                                }
                               />
                               <Label htmlFor="current-panel" className="text-sm text-[var(--axity-gray)]">
                                 Trabajo actualmente aquí
@@ -805,14 +889,14 @@ export function SlidePanelExperience({
                 {activeStep === 1 && (
                   <div className="space-y-6">
                     <div className="text-center">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${experienceSteps[activeStep].color} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+                      <div
+                        className={`w-16 h-16 bg-gradient-to-br ${experienceSteps[activeStep].color} rounded-xl flex items-center justify-center mx-auto mb-4`}
+                      >
                         <Code2 className="h-8 w-8 text-white" />
                       </div>
-                      <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-2">
-                        Proyectos destacados
-                      </h4>
+                      <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-2">Proyectos destacados</h4>
                       <p className="text-sm text-[var(--axity-gray)]">
-                        <span className="text-[var(--axity-magenta)] font-medium">*Obligatorio:</span> Agrega al menos un proyecto importante en el que trabajaste
+                        <span className="text-[var(--axity-magenta)] font-medium">*Obligatorio:</span> Agrega al menos un proyecto importante
                       </p>
                     </div>
 
@@ -822,13 +906,14 @@ export function SlidePanelExperience({
                         <div className="flex items-center gap-2 mb-4">
                           <Rocket className="h-4 w-4 text-[var(--axity-mint)]" />
                           <span className="font-medium text-[var(--axity-purple)]">
-                            {currentExp.projects.length} proyecto{currentExp.projects.length !== 1 ? 's' : ''} agregado{currentExp.projects.length !== 1 ? 's' : ''}
+                            {currentExp.projects.length} proyecto{currentExp.projects.length !== 1 ? 's' : ''} agregado
+                            {currentExp.projects.length !== 1 ? 's' : ''}
                           </span>
                         </div>
 
                         {currentExp.projects.map((project, index) => (
                           <motion.div
-                            key={index}
+                            key={`${project.name}-${index}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-200"
@@ -842,7 +927,7 @@ export function SlidePanelExperience({
                                   <div className="flex flex-wrap gap-1">
                                     {project.technologies.map((tech, techIndex) => (
                                       <Badge
-                                        key={techIndex}
+                                        key={`${tech.name}-${techIndex}`}
                                         variant="secondary"
                                         className="text-xs bg-[var(--axity-violet)]/10 text-[var(--axity-violet)]"
                                       >
@@ -855,7 +940,7 @@ export function SlidePanelExperience({
                               <Button
                                 onClick={() => {
                                   const updatedProjects = currentExp.projects.filter((_, i) => i !== index);
-                                  setCurrentExp(prev => ({ ...prev, projects: updatedProjects }));
+                                  setCurrentExp((prev) => ({ ...prev, projects: updatedProjects }));
                                 }}
                                 variant="ghost"
                                 size="sm"
@@ -872,22 +957,14 @@ export function SlidePanelExperience({
                     {/* Formulario para agregar nuevo proyecto */}
                     {!showProjectForm ? (
                       <div className="text-center py-6 border-2 border-dashed border-[var(--axity-violet)]/30 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50">
-                        <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Button
-                            onClick={() => setShowProjectForm(true)}
-                            className="bg-axity-gradient-primary text-white shadow-lg"
-                          >
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button onClick={() => setShowProjectForm(true)} className="bg-axity-gradient-primary text-white shadow-lg">
                             <Plus className="h-4 w-4 mr-2" />
                             {currentExp.projects.length === 0 ? 'Agregar mi primer proyecto' : 'Agregar otro proyecto'}
                           </Button>
                         </motion.div>
                         {currentExp.projects.length === 0 && (
-                          <p className="text-sm text-[var(--axity-gray)] mt-2">
-                            Necesitas al menos un proyecto para continuar
-                          </p>
+                          <p className="text-sm text-[var(--axity-gray)] mt-2">Necesitas al menos un proyecto para continuar</p>
                         )}
                       </div>
                     ) : (
@@ -898,14 +975,9 @@ export function SlidePanelExperience({
                             <Button
                               onClick={() => {
                                 setShowProjectForm(false);
-                                setCurrentProject({
-                                  name: "",
-                                  role: "",
-                                  responsibilities: "",
-                                  technologies: []
-                                });
-                                setNewTechName("");
-                                setNewTechVersion("");
+                                setCurrentProject({ name: '', role: '', responsibilities: '', technologies: [] });
+                                setNewTechName('');
+                                setNewTechVersion('');
                               }}
                               variant="ghost"
                               size="sm"
@@ -925,26 +997,24 @@ export function SlidePanelExperience({
                             <Input
                               placeholder="ej. Sistema de Gestión de Inventarios, App Móvil E-commerce"
                               value={currentProject.name}
-                              onChange={(e) => setCurrentProject(prev => ({ ...prev, name: e.target.value }))}
+                              onChange={(e) => setCurrentProject((prev) => ({ ...prev, name: e.target.value }))}
                               className="bg-white border-blue-200 focus:border-blue-400"
                             />
                           </div>
 
-                          {/* Rol en el proyecto */}
+                          {/* Rol */}
                           <div>
                             <Label className="text-[var(--axity-purple)] font-medium flex items-center gap-2 mb-2">
                               <User className="h-4 w-4" />
                               Tu rol en este proyecto *
                             </Label>
                             <Input
-                              placeholder="ej. Frontend Developer, Tech Lead, Full Stack Developer"
+                              placeholder="ej. Frontend Developer, Tech Lead"
                               value={currentProject.role}
-                              onChange={(e) => setCurrentProject(prev => ({ ...prev, role: e.target.value }))}
+                              onChange={(e) => setCurrentProject((prev) => ({ ...prev, role: e.target.value }))}
                               className="bg-white border-purple-200 focus:border-purple-400"
                             />
                           </div>
-
-
 
                           {/* Responsabilidades */}
                           <div>
@@ -953,28 +1023,28 @@ export function SlidePanelExperience({
                               Tus responsabilidades principales *
                             </Label>
                             <Textarea
-                              placeholder="ej. Desarrollé el frontend usando React, implementé la API REST, coordiné con el equipo de diseño..."
+                              placeholder="ej. Desarrollé el frontend, implementé la API REST, coordiné con diseño..."
                               value={currentProject.responsibilities}
-                              onChange={(e) => setCurrentProject(prev => ({ ...prev, responsibilities: e.target.value }))}
+                              onChange={(e) => setCurrentProject((prev) => ({ ...prev, responsibilities: e.target.value }))}
                               className="min-h-[100px] bg-white border-orange-200 focus:border-orange-400 resize-none"
                             />
                           </div>
 
-                          {/* Herramientas/Tecnologías */}
+                          {/* ====== Tecnologías: catálogo + alta manual con datalist ====== */}
                           <div>
                             <Label className="text-[var(--axity-purple)] font-medium flex items-center gap-2 mb-2">
                               <Code2 className="h-4 w-4" />
                               Stack tecnológico del proyecto
                             </Label>
                             <p className="text-sm text-[var(--axity-gray)] mb-4 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
-                              💡 <strong>¿Qu�� agregar aquí?</strong> Enumera las tecnologías, lenguajes, frameworks, bases de datos, y herramientas que usaste específicamente en este proyecto.
+                              💡 Selecciona de tu catálogo (Paso 1) o agrega una nueva tecnología.
                             </p>
 
                             {/* Lista de tecnologías agregadas */}
                             {currentProject.technologies.length > 0 && (
                               <div className="mb-4">
                                 <div className="flex items-center gap-2 mb-3">
-                                  <div className="w-2 h-2 bg-[var(--axity-mint)] rounded-full"></div>
+                                  <div className="w-2 h-2 bg-[var(--axity-mint)] rounded-full" />
                                   <span className="text-sm font-medium text-[var(--axity-purple)]">
                                     Tecnologías agregadas ({currentProject.technologies.length})
                                   </span>
@@ -982,21 +1052,19 @@ export function SlidePanelExperience({
                                 <div className="flex flex-wrap gap-2 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
                                   {currentProject.technologies.map((tech, index) => (
                                     <Badge
-                                      key={index}
+                                      key={`${tech.name}-${index}`}
                                       variant="secondary"
                                       className="bg-white text-[var(--axity-violet)] border border-[var(--axity-violet)]/20 flex items-center gap-2 px-3 py-1.5 shadow-sm hover:shadow-md transition-shadow"
                                     >
                                       <Code2 className="h-3 w-3" />
                                       <span className="font-medium">{tech.name}</span>
                                       {tech.version && (
-                                        <span className="text-xs bg-[var(--axity-violet)]/10 px-1.5 py-0.5 rounded">
-                                          v{tech.version}
-                                        </span>
+                                        <span className="text-xs bg-[var(--axity-violet)]/10 px-1.5 py-0.5 rounded">v{tech.version}</span>
                                       )}
                                       <Button
                                         onClick={() => {
-                                          const updatedTechs = currentProject.technologies.filter((_, i) => i !== index);
-                                          setCurrentProject(prev => ({ ...prev, technologies: updatedTechs }));
+                                          const updated = currentProject.technologies.filter((_, i) => i !== index);
+                                          setCurrentProject((prev) => ({ ...prev, technologies: updated }));
                                         }}
                                         variant="ghost"
                                         size="sm"
@@ -1011,106 +1079,114 @@ export function SlidePanelExperience({
                               </div>
                             )}
 
-                            <div className="space-y-3">
-                              <div className="bg-white border-2 border-dashed border-[var(--axity-violet)]/30 rounded-lg p-4">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <Plus className="h-4 w-4 text-[var(--axity-violet)]" />
-                                  <span className="font-medium text-[var(--axity-purple)]">Agregar nueva tecnología</span>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-[var(--axity-gray)] font-medium">
-                                      Nombre *
-                                    </Label>
-                                    <Input
-                                      placeholder="ej. React, Node.js, PostgreSQL"
-                                      value={newTechName}
-                                      onChange={(e) => setNewTechName(e.target.value)}
-                                      className="bg-white border-[var(--axity-violet)]/20 focus:border-[var(--axity-violet)] focus:ring-[var(--axity-violet)]/20"
-                                    />
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-[var(--axity-gray)] font-medium">
-                                      Versión (opcional)
-                                    </Label>
-                                    <Input
-                                      placeholder="ej. 18.2, 16.14, 14.8"
-                                      value={newTechVersion}
-                                      onChange={(e) => setNewTechVersion(e.target.value)}
-                                      className="bg-white border-[var(--axity-violet)]/20 focus:border-[var(--axity-violet)] focus:ring-[var(--axity-violet)]/20"
-                                    />
-                                  </div>
-
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-transparent font-medium">
-                                      Acción
-                                    </Label>
-                                    <Button
-                                      onClick={() => {
-                                        if (newTechName.trim()) {
-                                          const newTech = {
-                                            name: newTechName.trim(),
-                                            version: newTechVersion.trim() || undefined
-                                          };
-                                          setCurrentProject(prev => ({
-                                            ...prev,
-                                            technologies: [...prev.technologies, newTech]
-                                          }));
-                                          setNewTechName("");
-                                          setNewTechVersion("");
-                                        }
-                                      }}
-                                      disabled={!newTechName.trim()}
-                                      className="w-full bg-axity-gradient-primary text-white hover:opacity-90 disabled:opacity-50"
-                                    >
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-
-                                {/* Ejemplos de tecnologías comunes */}
-                                <div className="mt-4 pt-3 border-t border-gray-200">
-                                  <p className="text-xs text-[var(--axity-gray)] mb-2">
-                                    💡 <strong>Ejemplos de tecnologías comunes:</strong>
-                                  </p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {[
-                                      "React", "Vue.js", "Angular", "Node.js", "Express", "Spring Boot",
-                                      "Java", "Python", "C#", "JavaScript", "TypeScript", "PHP",
-                                      "MySQL", "PostgreSQL", "MongoDB", "Redis", "AWS", "Azure",
-                                      "Docker", "Kubernetes", "Git", "Jenkins", "Jira", "Figma"
-                                    ].map((example) => (
+                            {/* Selector desde catálogo oficial */}
+                            <div className="space-y-2">
+                              <Label className="text-xs text-[var(--axity-gray)] font-medium">
+                                Seleccionar desde tu catálogo (Paso 1)
+                              </Label>
+                              {techCatalog.length === 0 ? (
+                                <p className="text-xs text-[var(--axity-gray)]">
+                                  No hay tecnologías en tu catálogo aún. Agrega skills en el Paso 1.
+                                </p>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {techCatalog.map((name) => {
+                                    const already = currentProject.technologies.some(
+                                      (t) => t.name.toLowerCase() === name.toLowerCase()
+                                    );
+                                    return (
                                       <button
-                                        key={example}
+                                        key={name}
+                                        disabled={already}
                                         onClick={() => {
-                                          if (!currentProject.technologies.find(tech => tech.name.toLowerCase() === example.toLowerCase())) {
-                                            setNewTechName(example);
+                                          if (!already) {
+                                            setCurrentProject((prev) => ({
+                                              ...prev,
+                                              technologies: [...prev.technologies, { name }],
+                                            }));
                                           }
                                         }}
-                                        className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-[var(--axity-violet)]/10 hover:text-[var(--axity-violet)] transition-colors"
+                                        className={`text-xs px-2 py-1 rounded border transition ${already
+                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                            : 'bg-white text-[var(--axity-violet)] border-[var(--axity-violet)]/30 hover:bg-[var(--axity-violet)]/10'
+                                          }`}
+                                        title={already ? 'Ya añadida' : 'Agregar tecnología'}
                                       >
-                                        {example}
+                                        {name}
                                       </button>
-                                    ))}
-                                  </div>
+                                    );
+                                  })}
                                 </div>
+                              )}
+                            </div>
+
+                            <div className="my-3" />
+
+                            {/* Alta manual con autocompletado (datalist) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs text-[var(--axity-gray)] font-medium">Nombre *</Label>
+                                <Input
+                                  list="tech-datalist"
+                                  placeholder="ej. React, Node.js, PostgreSQL"
+                                  value={newTechName}
+                                  onChange={(e) => setNewTechName(e.target.value)}
+                                  className="bg-white border-[var(--axity-violet)]/20 focus:border-[var(--axity-violet)] focus:ring-[var(--axity-violet)]/20"
+                                />
+                                <datalist id="tech-datalist">
+                                  {techCatalog.map((n) => (
+                                    <option key={n} value={n} />
+                                  ))}
+                                </datalist>
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs text-[var(--axity-gray)] font-medium">Versión (opcional)</Label>
+                                <Input
+                                  placeholder="ej. 18.2, 20, 16.14"
+                                  value={newTechVersion}
+                                  onChange={(e) => setNewTechVersion(e.target.value)}
+                                  className="bg-white border-[var(--axity-violet)]/20 focus:border-[var(--axity-violet)] focus:ring-[var(--axity-violet)]/20"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <Label className="text-xs text-transparent font-medium">Acción</Label>
+                                <Button
+                                  onClick={() => {
+                                    const name = newTechName.trim();
+                                    if (!name) return;
+                                    const exists = currentProject.technologies.some(
+                                      (t) => t.name.toLowerCase() === name.toLowerCase()
+                                    );
+                                    if (!exists) {
+                                      setCurrentProject((prev) => ({
+                                        ...prev,
+                                        technologies: [
+                                          ...prev.technologies,
+                                          { name, version: newTechVersion.trim() || undefined },
+                                        ],
+                                      }));
+                                    }
+                                    setNewTechName('');
+                                    setNewTechVersion('');
+                                  }}
+                                  disabled={!newTechName.trim()}
+                                  className="w-full bg-axity-gradient-primary text-white hover:opacity-90 disabled:opacity-50"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
                           </div>
+                          {/* ====== /Tecnologías ====== */}
 
                           {/* Botones de acción */}
                           <div className="flex justify-end gap-2 pt-4 border-t">
                             <Button
                               onClick={() => {
                                 setShowProjectForm(false);
-                                setCurrentProject({
-                                  name: "",
-                                  role: "",
-                                  responsibilities: "",
-                                  technologies: []
-                                });
+                                setCurrentProject({ name: '', role: '', responsibilities: '', technologies: [] });
                               }}
                               variant="outline"
                               size="sm"
@@ -1119,25 +1195,27 @@ export function SlidePanelExperience({
                             </Button>
                             <Button
                               onClick={() => {
-                                if (currentProject.name.trim() && currentProject.role.trim() && currentProject.responsibilities.trim()) {
-                                  setCurrentExp(prev => ({
+                                if (
+                                  currentProject.name.trim() &&
+                                  currentProject.role.trim() &&
+                                  currentProject.responsibilities.trim()
+                                ) {
+                                  setCurrentExp((prev) => ({
                                     ...prev,
-                                    projects: [...prev.projects, currentProject]
+                                    projects: [...prev.projects, currentProject],
                                   }));
-                                  setCurrentProject({
-                                    name: "",
-                                    role: "",
-                                    responsibilities: "",
-                                    technologies: []
-                                  });
+                                  setCurrentProject({ name: '', role: '', responsibilities: '', technologies: [] });
                                   setShowProjectForm(false);
-                                  setNewTechName("");
-                                  setNewTechVersion("");
-
+                                  setNewTechName('');
+                                  setNewTechVersion('');
                                   showContextualSuccess(`🚀 Proyecto "${currentProject.name}" agregado exitosamente!`);
                                 }
                               }}
-                              disabled={!currentProject.name.trim() || !currentProject.role.trim() || !currentProject.responsibilities.trim()}
+                              disabled={
+                                !currentProject.name.trim() ||
+                                !currentProject.role.trim() ||
+                                !currentProject.responsibilities.trim()
+                              }
                               className="bg-axity-gradient-primary text-white"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
@@ -1154,15 +1232,13 @@ export function SlidePanelExperience({
                 {activeStep === 2 && (
                   <div className="space-y-6">
                     <div className="text-center">
-                      <div className={`w-16 h-16 bg-gradient-to-br ${experienceSteps[activeStep].color} rounded-xl flex items-center justify-center mx-auto mb-4`}>
+                      <div
+                        className={`w-16 h-16 bg-gradient-to-br ${experienceSteps[activeStep].color} rounded-xl flex items-center justify-center mx-auto mb-4`}
+                      >
                         <Trophy className="h-8 w-8 text-white" />
                       </div>
-                      <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-2">
-                        Logros y desafíos
-                      </h4>
-                      <p className="text-sm text-[var(--axity-gray)]">
-                        Comparte tu impacto y los retos que enfrentaste
-                      </p>
+                      <h4 className="text-lg font-bold text-[var(--axity-purple)] mb-2">Logros y desafíos</h4>
+                      <p className="text-sm text-[var(--axity-gray)]">Comparte tu impacto y los retos que enfrentaste</p>
                     </div>
 
                     <div className="space-y-4">
@@ -1172,9 +1248,9 @@ export function SlidePanelExperience({
                           Desafíos principales resueltos
                         </Label>
                         <Textarea
-                          placeholder="ej. Optimicé el rendimiento del sistema reduciendo los tiempos de carga..."
+                          placeholder="ej. Optimicé rendimiento reduciendo tiempos de carga..."
                           value={currentExp.challenges}
-                          onChange={(e) => setCurrentExp(prev => ({ ...prev, challenges: e.target.value }))}
+                          onChange={(e) => setCurrentExp((prev) => ({ ...prev, challenges: e.target.value }))}
                           className="min-h-[100px] bg-red-50 border-red-200 focus:border-red-400 resize-none"
                         />
                       </div>
@@ -1187,7 +1263,7 @@ export function SlidePanelExperience({
                         <Textarea
                           placeholder="ej. Lideré un equipo de 5 desarrolladores implementando microservicios..."
                           value={currentExp.achievements}
-                          onChange={(e) => setCurrentExp(prev => ({ ...prev, achievements: e.target.value }))}
+                          onChange={(e) => setCurrentExp((prev) => ({ ...prev, achievements: e.target.value }))}
                           className="min-h-[100px] bg-yellow-50 border-yellow-200 focus:border-yellow-400 resize-none"
                         />
                       </div>
@@ -1199,13 +1275,7 @@ export function SlidePanelExperience({
 
             {/* Navigation Buttons */}
             <div className="flex items-center justify-between pt-6 border-t">
-              <Button
-                onClick={prevStep}
-                disabled={activeStep === 0}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
+              <Button onClick={prevStep} disabled={activeStep === 0} variant="outline" size="sm" className="flex items-center gap-2">
                 <ChevronLeft className="h-4 w-4" />
                 Atrás
               </Button>
@@ -1221,11 +1291,7 @@ export function SlidePanelExperience({
                     {savingExp ? 'Guardando…' : 'Guardar experiencia'}
                   </Button>
                 ) : (
-                  <Button
-                    onClick={nextStep}
-                    disabled={!canProceedStep()}
-                    className="bg-axity-gradient-primary text-white"
-                  >
+                  <Button onClick={nextStep} disabled={!canProceedStep()} className="bg-axity-gradient-primary text-white">
                     Siguiente
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -1236,5 +1302,5 @@ export function SlidePanelExperience({
         </SheetContent>
       </Sheet>
     </div>
-  );
+  )
 }

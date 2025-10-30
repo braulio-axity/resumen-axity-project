@@ -574,7 +574,7 @@ export default function TechnologiesAdmin() {
         open={confirmDelete.open}
         onOpenChange={(open) => setConfirmDelete((p) => ({ ...p, open }))}
       >
-        <AlertDialogContent>
+        <AlertDialogContent  className="ax-dialog">
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar tecnología</AlertDialogTitle>
             <AlertDialogDescription>

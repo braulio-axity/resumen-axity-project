@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { AutoSaveIndicator } from "@/components/AutoSaveIndicator";
-import { CheckCircle2, TrendingUp, LogOut, User } from "lucide-react";
+import { CheckCircle2, LogOut, User } from "lucide-react";
 import axityLogo from "@/assets/logo_axity.svg";
 import type { ComponentType, ReactElement } from "react";
 
@@ -33,11 +33,10 @@ interface AxityHeaderProps {
     emoji: string;
   };
 
-  /** Datos del autosave (opcional). Nota: lastSaved puede venir como timestamp (number) y aquí lo convertimos a Date */
   autoSave?: {
-    status: AutoSaveStatus | string;     // puede venir más laxo desde el hook
-    lastSaved?: Date | number | null;    // a veces timestamp
-    error?: string | null;               // a veces null
+    status: AutoSaveStatus | string;
+    lastSaved?: Date | number | null;
+    error?: string | null;
     onForceSave?: () => void;
   };
 
@@ -86,7 +85,6 @@ export function AxityHeader({
       >
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            {/* Branding */}
             <div className="flex items-center gap-4">
               <motion.div whileHover={{ scale: 1.05, rotate: 5 }} className="relative group">
                 <img src={logoSrc ?? axityLogo} alt="Axity" className="h-8 w-auto" />
@@ -96,8 +94,6 @@ export function AxityHeader({
                 />
               </motion.div>
             </div>
-
-            {/* Stepper Desktop */}
             <div className="hidden md:flex items-center gap-2 bg-white/20 rounded-xl p-2">
               {steps.map((step, index) => {
                 const Icon = step.icon;
